@@ -48,10 +48,52 @@ python scripts/smoke_health.py
 
 Si `FUNCTION_HEALTH_ENDPOINT` apunta solo al host, el script llama `/api/health`. Si incluye path, usa el endpoint configurado. No requiere Azure login cuando el endpoint es publico.
 
+## Workflow manual contra Azure Storage
+
+El workflow `.github/workflows/model-flow.yml` mantiene los pull requests locales: compila, corre tests, valida el sample y ejecuta el flow sin Azure. Solo el job manual `azure-model-flow` usa `azure/login@v2`, y solo cuando `run_azure_flow=true`.
+
+GitHub environment requerido: `sandbox-local`.
+
+Variables no secretas requeridas:
+
+```text
+AZURE_CLIENT_ID=<modelGithubActionsClientId publicado por pricing-mlops-platform>
+AZURE_TENANT_ID=<tenant id>
+AZURE_SUBSCRIPTION_ID=<subscription id>
+AZURE_STORAGE_ACCOUNT=stpmlops...
+AZURE_STORAGE_DFS_ENDPOINT=https://stpmlops....dfs.core.windows.net
+MLOPS_ENVIRONMENT=sandbox-local
+MLOPS_CONTAINER_RAW_MASKED=raw-masked
+MLOPS_CONTAINER_RUNS=runs
+MLOPS_CONTAINER_SNAPSHOTS=snapshots
+MLOPS_CONTAINER_DRIFT_LOGS=drift-logs
+MLOPS_CONTAINER_REPORTS=reports
+MLOPS_CONTAINER_ARTIFACTS=artifacts
+```
+
+Ejecucion:
+
+1. Abrir Actions en `pricing-mlops`.
+2. Ejecutar `Model Flow`.
+3. Seleccionar `environment=sandbox-local`.
+4. Activar `run_azure_flow=true`.
+5. Dejar `input_blob_path` vacio para usar `data/samples/masked/sample_pricing.csv`, o indicar un blob bajo `raw-masked` para descargar input desde Storage.
+
+Los outputs se suben con Azure CLI y `--auth-mode login`, sin account keys ni connection strings:
+
+```text
+runs/environment=<env>/run_date=<yyyymmdd>/run_id=<run_id>/model_run_log.json
+snapshots/environment=<env>/run_date=<yyyymmdd>/run_id=<run_id>/model_output_snapshot.csv
+drift-logs/environment=<env>/run_date=<yyyymmdd>/run_id=<run_id>/model_drift_log.json
+reports/environment=<env>/run_date=<yyyymmdd>/run_id=<run_id>/report.md
+artifacts/environment=<env>/run_date=<yyyymmdd>/run_id=<run_id>/curated_pricing.csv
+```
+
 ## Que no hace este repo
 
 - No crea Resource Groups, Storage Accounts, Key Vault, redes ni role assignments.
 - No usa `azure/login` en PR.
+- No despliega infraestructura desde este repo.
 - No guarda secretos, connection strings, account keys ni datos unmasked.
 - No sustituye el repo plataforma; consume sus variables, rutas y contratos.
 

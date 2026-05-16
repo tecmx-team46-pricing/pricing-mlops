@@ -1,0 +1,65 @@
+from pathlib import Path
+from unittest.mock import Mock
+import json
+
+from scripts.upload_run_outputs import build_upload_plan, upload_run_outputs
+
+
+def test_build_upload_plan_maps_artifacts_to_contract_containers(tmp_path):
+    run_dir = tmp_path / "run-001"
+    run_dir.mkdir()
+    for name in [
+        "model_output_snapshot.csv",
+        "model_drift_log.json",
+        "report.md",
+        "curated_pricing.csv",
+    ]:
+        (run_dir / name).write_text("x")
+    (run_dir / "model_run_log.json").write_text(json.dumps({"run_id": "run-001"}))
+
+    plan = build_upload_plan(run_dir, environment="sandbox-local")
+
+    assert plan["runs"].blob_path.endswith("model_run_log.json")
+    assert plan["snapshots"].blob_path.endswith("model_output_snapshot.csv")
+    assert plan["drift-logs"].blob_path.endswith("model_drift_log.json")
+    assert plan["reports"].blob_path.endswith("report.md")
+    assert plan["artifacts"].blob_path.endswith("curated_pricing.csv")
+
+
+def test_upload_run_outputs_uses_azure_cli_login_auth(tmp_path):
+    run_dir = tmp_path / "20260516T000000Z-test"
+    run_dir.mkdir()
+    for name in [
+        "model_output_snapshot.csv",
+        "model_drift_log.json",
+        "report.md",
+        "curated_pricing.csv",
+    ]:
+        (run_dir / name).write_text("x")
+    (run_dir / "model_run_log.json").write_text(
+        json.dumps({"run_id": "20260516T000000Z-test"})
+    )
+
+    runner = Mock()
+
+    upload_run_outputs(
+        run_dir=run_dir,
+        storage_account="stexample",
+        environment="sandbox-local",
+        containers={
+            "runs": "runs",
+            "snapshots": "snapshots",
+            "drift_logs": "drift-logs",
+            "reports": "reports",
+            "artifacts": "artifacts",
+        },
+        runner=runner,
+    )
+
+    assert runner.call_count == 5
+    first_command = runner.call_args_list[0].args[0]
+    assert first_command[:4] == ["az", "storage", "blob", "upload"]
+    assert "--auth-mode" in first_command
+    assert "login" in first_command
+    assert "--account-name" in first_command
+    assert "stexample" in first_command

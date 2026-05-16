@@ -9,6 +9,9 @@ Definir como `pricing-mlops` consume la plataforma sin acoplarse a IaC ni crear 
 El repo plataforma publica valores no sensibles por ambiente mediante GitHub environment variables, artifacts operativos o documentacion de outputs:
 
 - `MLOPS_ENVIRONMENT`
+- `AZURE_CLIENT_ID`
+- `AZURE_TENANT_ID`
+- `AZURE_SUBSCRIPTION_ID`
 - `AZURE_STORAGE_ACCOUNT`
 - `AZURE_STORAGE_DFS_ENDPOINT`
 - `AZURE_KEY_VAULT_URI`
@@ -37,6 +40,20 @@ Cada corrida local o futura corrida Azure produce un `run_id` y artefactos míni
 | `report.md` | Resumen humano sin datos sensibles. |
 
 En local se escriben bajo `runs/local/<run_id>/`. En Azure, el layout futuro debe mapear esos artefactos a los contenedores `curated`, `runs`, `snapshots`, `drift-logs`, `reports` y `artifacts`.
+
+El primer pipeline Azure minimo usa el output `modelGithubActionsClientId` de `pricing-mlops-platform` como `AZURE_CLIENT_ID`. Ese principal solo requiere `Storage Blob Data Contributor` sobre el Storage Account del workload `sandbox-local`. No requiere `Owner`, `Contributor` de subscription ni Key Vault para este paso.
+
+## Layout de subida PoC
+
+```text
+runs/environment=<env>/run_date=<yyyymmdd>/run_id=<run_id>/model_run_log.json
+snapshots/environment=<env>/run_date=<yyyymmdd>/run_id=<run_id>/model_output_snapshot.csv
+drift-logs/environment=<env>/run_date=<yyyymmdd>/run_id=<run_id>/model_drift_log.json
+reports/environment=<env>/run_date=<yyyymmdd>/run_id=<run_id>/report.md
+artifacts/environment=<env>/run_date=<yyyymmdd>/run_id=<run_id>/curated_pricing.csv
+```
+
+`input_blob_path`, cuando se use, se resuelve dentro de `MLOPS_CONTAINER_RAW_MASKED`. Si se deja vacio, el workflow usa el sample local sintético/masked y sube solo outputs.
 
 ## Limites
 
