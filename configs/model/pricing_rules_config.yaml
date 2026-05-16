@@ -1,0 +1,10 @@
+pricing_rules:
+  review_increase_threshold: 0.01
+  review_decrease_threshold: -0.01
+  hold_action: hold
+  increase_action: review_increase
+  decrease_action: review_decrease
+
+drift:
+  status_without_baseline: not_evaluated
+  default_action: collect_baseline

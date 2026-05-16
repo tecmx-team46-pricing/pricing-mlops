@@ -1,0 +1,12 @@
+model:
+  name: pricing-pass-through-template
+  version: 0.1.0
+  scoring_mode: controlled_pass_through
+  default_recommendation_source: P50_PRICE
+
+validation:
+  required_columns:
+    - kpn
+    - vpareadescription
+    - distysegment
+    - current_price

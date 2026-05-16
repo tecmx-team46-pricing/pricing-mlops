@@ -1,0 +1,4 @@
+kpn,vpareadescription,distysegment,current_price,P0_PRICE,P20_PRICE,P50_PRICE,P85_PRICE,P100_PRICE,masked_customer_group
+KPN-001,north,enterprise,10.00,8.00,9.00,10.25,11.50,13.00,grp_a
+KPN-002,south,commercial,20.00,18.00,19.00,20.00,22.00,25.00,grp_b
+KPN-003,west,public,15.00,12.00,14.00,15.50,17.00,19.00,grp_c

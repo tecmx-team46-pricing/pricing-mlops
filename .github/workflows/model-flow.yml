@@ -1,0 +1,57 @@
+name: Model Flow
+
+on:
+  pull_request:
+  workflow_dispatch:
+    inputs:
+      run_smoke_health:
+        description: "Run optional sandbox-local health smoke test"
+        type: boolean
+        default: false
+
+jobs:
+  model-ci:
+    name: Model CI
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install dependencies
+        run: python -m pip install -e ".[dev]"
+
+      - name: Compile Python files
+        run: python -m compileall src scripts tests
+
+      - name: Run tests
+        run: python -m pytest
+
+      - name: Validate masked sample
+        run: python scripts/validate_inputs.py --input data/samples/masked/sample_pricing.csv
+
+      - name: Run local model flow
+        run: python scripts/run_local_flow.py --input data/samples/masked/sample_pricing.csv --output runs/local
+
+  smoke-health:
+    name: Sandbox Health Smoke Test
+    runs-on: ubuntu-latest
+    if: github.event_name == 'workflow_dispatch' && inputs.run_smoke_health
+    environment: sandbox-local
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Run sandbox health smoke test
+        env:
+          FUNCTION_HEALTH_ENDPOINT: ${{ vars.FUNCTION_HEALTH_ENDPOINT }}
+        run: python scripts/smoke_health.py
