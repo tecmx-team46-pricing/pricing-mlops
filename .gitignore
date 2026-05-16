@@ -21,6 +21,10 @@ configs/environments/*.env
 runs/
 outputs/
 artifacts/
+reports/generated/
+reports/**/*.html
+reports/**/*.pdf
+reports/**/*.docx
 
 # Real or large data files
 data/samples/unmasked/**
@@ -32,6 +36,9 @@ data/**/*.avro
 data/**/*.orc
 data/**/*.sqlite
 data/**/*.db
+
+# Notebook checkpoints
+.ipynb_checkpoints/
 
 # OS/editor
 .DS_Store

@@ -57,3 +57,14 @@ Si `FUNCTION_HEALTH_ENDPOINT` apunta solo al host, el script llama `/api/health`
 ## Datos
 
 Solo se versionan samples pequeños, sintéticos o masked. Los datos reales/unmasked viven fuera de Git en Storage/ADLS gobernado por `pricing-mlops-platform`.
+
+## Convenciones tomadas de Cookiecutter Data Science
+
+Este repo adopta solo las partes útiles para el caso operativo:
+
+- `notebooks/` para notebooks controlados.
+- `references/` para diccionarios y notas no sensibles.
+- `reports/` para plantillas o ejemplos sanitizados.
+- `src/pricing_mlops/modeling/` para interfaces de inferencia.
+
+No adopta `data/raw`, `data/interim` ni `data/processed` porque el contrato de gobierno exige que los datos reales vivan en Storage/ADLS, no en Git.
