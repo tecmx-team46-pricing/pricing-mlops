@@ -11,10 +11,14 @@ def score_pricing(records: Iterable[Mapping[str, Any]]) -> list[dict[str, Any]]:
     for record in records:
         row = dict(record)
         current_price = _to_float(row.get("current_price"), default=0.0)
-        recommended_price = _recommended_price(row, current_price)
+        recommended_price = _rule_price(row, "P50_PRICE", current_price)
+        floor_price = _rule_price(row, "P20_PRICE", recommended_price)
+        target_price = _rule_price(row, "P85_PRICE", recommended_price)
         delta = recommended_price - current_price
 
+        row["floor_price"] = round(floor_price, 4)
         row["recommended_price"] = round(recommended_price, 4)
+        row["target_price"] = round(target_price, 4)
         row["pricing_action"] = _pricing_action(delta, current_price)
         row["score_timestamp_utc"] = timestamp
         scored.append(row)
@@ -22,10 +26,10 @@ def score_pricing(records: Iterable[Mapping[str, Any]]) -> list[dict[str, Any]]:
     return scored
 
 
-def _recommended_price(row: Mapping[str, Any], current_price: float) -> float:
-    if row.get("P50_PRICE") not in (None, ""):
-        return _to_float(row["P50_PRICE"], default=current_price)
-    return current_price
+def _rule_price(row: Mapping[str, Any], column: str, default: float) -> float:
+    if row.get(column) not in (None, ""):
+        return _to_float(row[column], default=default)
+    return default
 
 
 def _pricing_action(delta: float, current_price: float) -> str:

@@ -6,5 +6,9 @@ pricing_rules:
   decrease_action: review_decrease
 
 drift:
-  status_without_baseline: not_evaluated
-  default_action: collect_baseline
+  metric: relative_range
+  threshold_warning: 0.25
+  threshold_critical: 0.5
+  green_action: continue
+  yellow_action: review_before_promoting
+  red_action: block_and_review

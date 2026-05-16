@@ -30,6 +30,7 @@ python scripts/run_local_flow.py --input data/samples/masked/sample_pricing.csv 
 El flow local escribe artefactos en `runs/local/<run_id>/`:
 
 - `model_run_log.json`
+- `curated_pricing.csv`
 - `model_output_snapshot.csv`
 - `model_drift_log.json`
 - `report.md`
@@ -57,6 +58,16 @@ Si `FUNCTION_HEALTH_ENDPOINT` apunta solo al host, el script llama `/api/health`
 ## Datos
 
 Solo se versionan samples pequeños, sintéticos o masked. Los datos reales/unmasked viven fuera de Git en Storage/ADLS gobernado por `pricing-mlops-platform`.
+
+El flujo local simula la ruta real así:
+
+```text
+data/samples/masked/sample_pricing.csv
+-> curated_pricing.csv
+-> model_output_snapshot.csv
+-> model_drift_log.json
+-> model_run_log.json + report.md
+```
 
 ## Convenciones tomadas de Cookiecutter Data Science
 

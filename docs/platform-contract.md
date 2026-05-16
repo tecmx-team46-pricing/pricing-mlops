@@ -31,11 +31,12 @@ Cada corrida local o futura corrida Azure produce un `run_id` y artefactos míni
 | Archivo | Proposito |
 |---|---|
 | `model_run_log.json` | Metadata de corrida, estado, conteos, timestamp y rutas de artefactos. |
+| `curated_pricing.csv` | Dataset normalizado para scoring local o futura escritura a `curated`. |
 | `model_output_snapshot.csv` | Snapshot de scoring controlado con precios recomendados. |
-| `model_drift_log.json` | Resultado de drift básico o estado `not_evaluated` si no hay baseline. |
+| `model_drift_log.json` | Resultado de drift básico con métricas estructuradas por variable. |
 | `report.md` | Resumen humano sin datos sensibles. |
 
-En local se escriben bajo `runs/local/<run_id>/`. En Azure, el layout futuro debe mapear esos artefactos a los contenedores `runs`, `snapshots`, `drift-logs`, `reports` y `artifacts`.
+En local se escriben bajo `runs/local/<run_id>/`. En Azure, el layout futuro debe mapear esos artefactos a los contenedores `curated`, `runs`, `snapshots`, `drift-logs`, `reports` y `artifacts`.
 
 ## Limites
 

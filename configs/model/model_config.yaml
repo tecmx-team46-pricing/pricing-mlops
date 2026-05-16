@@ -10,3 +10,9 @@ validation:
     - vpareadescription
     - distysegment
     - current_price
+
+versions:
+  dataset_version: local-sample
+  schema_version: pricing_input_schema_v1
+  model_version: pricing-pass-through-template/0.1.0
+  config_version: pricing_rules_config_v1
