@@ -8,8 +8,14 @@ on:
         description: "GitHub/Azure environment to use"
         type: choice
         options:
-          - sandbox-local
-        default: sandbox-local
+          - staging
+          - validation
+        default: staging
+      run_owner:
+        description: "Logical owner partition for uploaded outputs"
+        type: string
+        required: false
+        default: team46
       run_azure_flow:
         description: "Run model flow and upload outputs to Azure Storage"
         type: boolean
@@ -20,7 +26,7 @@ on:
         required: false
         default: ""
       run_smoke_health:
-        description: "Run optional sandbox-local health smoke test"
+        description: "Run optional environment health smoke test"
         type: boolean
         default: false
 
@@ -53,7 +59,7 @@ jobs:
         run: python scripts/run_local_flow.py --input data/samples/masked/sample_pricing.csv --output runs/local
 
   smoke-health:
-    name: Sandbox Health Smoke Test
+    name: Environment Health Smoke Test
     runs-on: ubuntu-latest
     if: github.event_name == 'workflow_dispatch' && inputs.run_smoke_health
     environment: ${{ inputs.environment }}
@@ -66,7 +72,7 @@ jobs:
         with:
           python-version: "3.11"
 
-      - name: Run sandbox health smoke test
+      - name: Run environment health smoke test
         env:
           FUNCTION_HEALTH_ENDPOINT: ${{ vars.FUNCTION_HEALTH_ENDPOINT }}
         run: python scripts/smoke_health.py
@@ -81,6 +87,7 @@ jobs:
       id-token: write
     env:
       MLOPS_ENVIRONMENT: ${{ inputs.environment }}
+      MLOPS_RUN_OWNER: ${{ inputs.run_owner }}
       AZURE_STORAGE_ACCOUNT: ${{ vars.AZURE_STORAGE_ACCOUNT }}
       MLOPS_CONTAINER_RAW_MASKED: ${{ vars.MLOPS_CONTAINER_RAW_MASKED }}
       MLOPS_CONTAINER_RUNS: ${{ vars.MLOPS_CONTAINER_RUNS }}

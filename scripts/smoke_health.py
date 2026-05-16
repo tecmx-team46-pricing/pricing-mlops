@@ -14,7 +14,7 @@ def main() -> int:
     if not endpoint:
         print(
             "FUNCTION_HEALTH_ENDPOINT is required for smoke_health.py. "
-            "Set it to the sandbox-local Function host or full health URL.",
+            "Set it to the target environment Function host or full health URL.",
             file=sys.stderr,
         )
         return 4

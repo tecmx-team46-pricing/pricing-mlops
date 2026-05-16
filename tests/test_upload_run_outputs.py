@@ -17,8 +17,9 @@ def test_build_upload_plan_maps_artifacts_to_contract_containers(tmp_path):
         (run_dir / name).write_text("x")
     (run_dir / "model_run_log.json").write_text(json.dumps({"run_id": "run-001"}))
 
-    plan = build_upload_plan(run_dir, environment="sandbox-local")
+    plan = build_upload_plan(run_dir, environment="staging", run_owner="team46")
 
+    assert plan["runs"].blob_path.startswith("environment=staging/owner=team46/")
     assert plan["runs"].blob_path.endswith("model_run_log.json")
     assert plan["snapshots"].blob_path.endswith("model_output_snapshot.csv")
     assert plan["drift-logs"].blob_path.endswith("model_drift_log.json")
@@ -45,7 +46,8 @@ def test_upload_run_outputs_uses_azure_cli_login_auth(tmp_path):
     upload_run_outputs(
         run_dir=run_dir,
         storage_account="stexample",
-        environment="sandbox-local",
+        environment="staging",
+        run_owner="team46",
         containers={
             "runs": "runs",
             "snapshots": "snapshots",
@@ -63,3 +65,4 @@ def test_upload_run_outputs_uses_azure_cli_login_auth(tmp_path):
     assert "login" in first_command
     assert "--account-name" in first_command
     assert "stexample" in first_command
+    assert any("owner=team46" in part for part in first_command)

@@ -25,7 +25,8 @@ def main() -> int:
     parser = argparse.ArgumentParser(description="Upload Pricing MLOps run outputs to Azure Storage.")
     parser.add_argument("--run-dir", required=True, help="Local run output directory.")
     parser.add_argument("--storage-account", default=os.getenv("AZURE_STORAGE_ACCOUNT"))
-    parser.add_argument("--environment", default=os.getenv("MLOPS_ENVIRONMENT", "sandbox-local"))
+    parser.add_argument("--environment", default=os.getenv("MLOPS_ENVIRONMENT", "staging"))
+    parser.add_argument("--run-owner", default=os.getenv("MLOPS_RUN_OWNER", "team46"))
     parser.add_argument("--runs-container", default=os.getenv("MLOPS_CONTAINER_RUNS", "runs"))
     parser.add_argument("--snapshots-container", default=os.getenv("MLOPS_CONTAINER_SNAPSHOTS", "snapshots"))
     parser.add_argument("--drift-logs-container", default=os.getenv("MLOPS_CONTAINER_DRIFT_LOGS", "drift-logs"))
@@ -42,6 +43,7 @@ def main() -> int:
             run_dir=Path(args.run_dir),
             storage_account=args.storage_account,
             environment=args.environment,
+            run_owner=args.run_owner,
             containers={
                 "runs": args.runs_container,
                 "snapshots": args.snapshots_container,
@@ -62,11 +64,17 @@ def upload_run_outputs(
     run_dir: Path,
     storage_account: str,
     environment: str,
+    run_owner: str,
     containers: dict[str, str],
     runner: Runner | None = None,
 ) -> None:
     command_runner = runner or _run_command
-    plan = build_upload_plan(run_dir=run_dir, environment=environment, containers=containers)
+    plan = build_upload_plan(
+        run_dir=run_dir,
+        environment=environment,
+        run_owner=run_owner,
+        containers=containers,
+    )
 
     for target in plan.values():
         command_runner(
@@ -94,6 +102,7 @@ def upload_run_outputs(
 def build_upload_plan(
     run_dir: Path,
     environment: str,
+    run_owner: str = "team46",
     containers: dict[str, str] | None = None,
 ) -> dict[str, UploadTarget]:
     resolved_run_dir = Path(run_dir)
@@ -109,7 +118,7 @@ def build_upload_plan(
     }
     run_id = _run_id_from_log(resolved_run_dir)
     run_date = run_id[:8] if len(run_id) >= 8 else "unknown"
-    prefix = f"environment={environment}/run_date={run_date}/run_id={run_id}"
+    prefix = f"environment={environment}/owner={run_owner}/run_date={run_date}/run_id={run_id}"
 
     files = {
         "runs": "model_run_log.json",

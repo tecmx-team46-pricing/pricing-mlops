@@ -18,3 +18,5 @@
 Los datos reales y unmasked deben vivir fuera de Git en Storage/ADLS gobernado por `pricing-mlops-platform`. El repo funcional consume `raw-masked`, `curated` y `baseline` con permisos mínimos, y escribe artefactos hacia `runs`, `snapshots`, `drift-logs`, `reports` y `artifacts`.
 
 El workflow manual de Azure no lee ni escribe `raw-unmasked`. Para la primera corrida puede usar el sample local masked; cuando exista un dataset remoto, `input_blob_path` debe apuntar a un blob dentro de `raw-masked`.
+
+Los sandboxes personales son local/admin only. GitHub Actions del modelo usa ambientes compartidos como `staging` o `validation` y separa corridas con `MLOPS_RUN_OWNER`.
