@@ -24,7 +24,7 @@ on:
         description: "Optional blob path under MLOPS_CONTAINER_RAW_MASKED to use as input"
         type: string
         required: false
-        default: ""
+        default: "samples/sample_pricing_v1.csv"
       run_smoke_health:
         description: "Run optional environment health smoke test"
         type: boolean
@@ -90,6 +90,7 @@ jobs:
       MLOPS_RUN_OWNER: ${{ inputs.run_owner }}
       AZURE_STORAGE_ACCOUNT: ${{ vars.AZURE_STORAGE_ACCOUNT }}
       MLOPS_CONTAINER_RAW_MASKED: ${{ vars.MLOPS_CONTAINER_RAW_MASKED }}
+      MLOPS_CONTAINER_CURATED: ${{ vars.MLOPS_CONTAINER_CURATED }}
       MLOPS_CONTAINER_RUNS: ${{ vars.MLOPS_CONTAINER_RUNS }}
       MLOPS_CONTAINER_SNAPSHOTS: ${{ vars.MLOPS_CONTAINER_SNAPSHOTS }}
       MLOPS_CONTAINER_DRIFT_LOGS: ${{ vars.MLOPS_CONTAINER_DRIFT_LOGS }}
@@ -123,6 +124,7 @@ jobs:
           if [[ -n "${{ inputs.input_blob_path }}" ]]; then
             mkdir -p runs/azure-input
             input_path="runs/azure-input/input.csv"
+            echo "Downloading input from ${MLOPS_CONTAINER_RAW_MASKED}/${{ inputs.input_blob_path }}"
             az storage blob download \
               --account-name "${AZURE_STORAGE_ACCOUNT}" \
               --container-name "${MLOPS_CONTAINER_RAW_MASKED}" \
@@ -130,7 +132,10 @@ jobs:
               --file "${input_path}" \
               --auth-mode login \
               --overwrite true
+          else
+            echo "Using local masked sample at ${input_path}"
           fi
+          echo "Resolved input path: ${input_path}"
           echo "input_path=${input_path}" >> "${GITHUB_OUTPUT}"
 
       - name: Run model flow
@@ -140,7 +145,11 @@ jobs:
           python scripts/validate_inputs.py --input "${{ steps.input.outputs.input_path }}"
           python scripts/run_local_flow.py --input "${{ steps.input.outputs.input_path }}" --output runs/azure
           run_dir="$(find runs/azure -mindepth 1 -maxdepth 1 -type d | sort | tail -n 1)"
+          run_id="$(basename "${run_dir}")"
+          echo "Run directory: ${run_dir}"
+          echo "Run id: ${run_id}"
           echo "RUN_DIR=${run_dir}" >> "${GITHUB_ENV}"
+          echo "RUN_ID=${run_id}" >> "${GITHUB_ENV}"
 
       - name: Upload run outputs to Storage
         run: python scripts/upload_run_outputs.py --run-dir "${RUN_DIR}"

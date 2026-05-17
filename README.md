@@ -65,6 +65,7 @@ AZURE_STORAGE_DFS_ENDPOINT=https://stpmlops....dfs.core.windows.net
 MLOPS_ENVIRONMENT=staging
 MLOPS_RUN_OWNER=team46
 MLOPS_CONTAINER_RAW_MASKED=raw-masked
+MLOPS_CONTAINER_CURATED=curated
 MLOPS_CONTAINER_RUNS=runs
 MLOPS_CONTAINER_SNAPSHOTS=snapshots
 MLOPS_CONTAINER_DRIFT_LOGS=drift-logs
@@ -79,12 +80,13 @@ Ejecucion:
 3. Seleccionar `environment=staging` o `validation`.
 4. Activar `run_azure_flow=true`.
 5. Usar `run_owner=team46` para corridas compartidas o un usuario para particionar outputs.
-6. Dejar `input_blob_path` vacio para usar `data/samples/masked/sample_pricing.csv`, o indicar un blob bajo `raw-masked` para descargar input desde Storage.
+6. Usar `input_blob_path=samples/sample_pricing_v1.csv` para descargar el dataset compartido desde `raw-masked`. Dejarlo vacio solo para usar `data/samples/masked/sample_pricing.csv`.
 
 Los outputs se suben con Azure CLI y `--auth-mode login`, sin account keys ni connection strings:
 
 ```text
 runs/environment=<env>/owner=<owner>/run_date=<yyyymmdd>/run_id=<run_id>/model_run_log.json
+curated/environment=<env>/owner=<owner>/run_date=<yyyymmdd>/run_id=<run_id>/curated_pricing.csv
 snapshots/environment=<env>/owner=<owner>/run_date=<yyyymmdd>/run_id=<run_id>/model_output_snapshot.csv
 drift-logs/environment=<env>/owner=<owner>/run_date=<yyyymmdd>/run_id=<run_id>/model_drift_log.json
 reports/environment=<env>/owner=<owner>/run_date=<yyyymmdd>/run_id=<run_id>/report.md

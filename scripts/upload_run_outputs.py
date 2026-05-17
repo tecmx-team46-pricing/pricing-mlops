@@ -27,6 +27,7 @@ def main() -> int:
     parser.add_argument("--storage-account", default=os.getenv("AZURE_STORAGE_ACCOUNT"))
     parser.add_argument("--environment", default=os.getenv("MLOPS_ENVIRONMENT", "staging"))
     parser.add_argument("--run-owner", default=os.getenv("MLOPS_RUN_OWNER", "team46"))
+    parser.add_argument("--curated-container", default=os.getenv("MLOPS_CONTAINER_CURATED", "curated"))
     parser.add_argument("--runs-container", default=os.getenv("MLOPS_CONTAINER_RUNS", "runs"))
     parser.add_argument("--snapshots-container", default=os.getenv("MLOPS_CONTAINER_SNAPSHOTS", "snapshots"))
     parser.add_argument("--drift-logs-container", default=os.getenv("MLOPS_CONTAINER_DRIFT_LOGS", "drift-logs"))
@@ -45,6 +46,7 @@ def main() -> int:
             environment=args.environment,
             run_owner=args.run_owner,
             containers={
+                "curated": args.curated_container,
                 "runs": args.runs_container,
                 "snapshots": args.snapshots_container,
                 "drift_logs": args.drift_logs_container,
@@ -77,6 +79,12 @@ def upload_run_outputs(
     )
 
     for target in plan.values():
+        print(
+            "upload plan: "
+            f"container={target.container} "
+            f"blob_path={target.blob_path} "
+            f"source={target.source}"
+        )
         command_runner(
             [
                 "az",
@@ -111,6 +119,7 @@ def build_upload_plan(
 
     container_map = containers or {
         "runs": "runs",
+        "curated": "curated",
         "snapshots": "snapshots",
         "drift_logs": "drift-logs",
         "reports": "reports",
@@ -121,6 +130,7 @@ def build_upload_plan(
     prefix = f"environment={environment}/owner={run_owner}/run_date={run_date}/run_id={run_id}"
 
     files = {
+        "curated": "curated_pricing.csv",
         "runs": "model_run_log.json",
         "snapshots": "model_output_snapshot.csv",
         "drift-logs": "model_drift_log.json",
@@ -128,6 +138,7 @@ def build_upload_plan(
         "artifacts": "curated_pricing.csv",
     }
     mapped_containers = {
+        "curated": container_map["curated"],
         "runs": container_map["runs"],
         "snapshots": container_map["snapshots"],
         "drift-logs": container_map["drift_logs"],

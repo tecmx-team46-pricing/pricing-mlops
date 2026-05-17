@@ -20,6 +20,9 @@ def test_build_upload_plan_maps_artifacts_to_contract_containers(tmp_path):
     plan = build_upload_plan(run_dir, environment="staging", run_owner="team46")
 
     assert plan["runs"].blob_path.startswith("environment=staging/owner=team46/")
+    assert plan["curated"].container == "curated"
+    assert plan["curated"].blob_path.startswith("environment=staging/owner=team46/")
+    assert plan["curated"].blob_path.endswith("curated_pricing.csv")
     assert plan["runs"].blob_path.endswith("model_run_log.json")
     assert plan["snapshots"].blob_path.endswith("model_output_snapshot.csv")
     assert plan["drift-logs"].blob_path.endswith("model_drift_log.json")
@@ -50,6 +53,7 @@ def test_upload_run_outputs_uses_azure_cli_login_auth(tmp_path):
         run_owner="team46",
         containers={
             "runs": "runs",
+            "curated": "curated",
             "snapshots": "snapshots",
             "drift_logs": "drift-logs",
             "reports": "reports",
@@ -58,7 +62,7 @@ def test_upload_run_outputs_uses_azure_cli_login_auth(tmp_path):
         runner=runner,
     )
 
-    assert runner.call_count == 5
+    assert runner.call_count == 6
     first_command = runner.call_args_list[0].args[0]
     assert first_command[:4] == ["az", "storage", "blob", "upload"]
     assert "--auth-mode" in first_command

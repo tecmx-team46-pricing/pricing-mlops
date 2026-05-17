@@ -52,9 +52,10 @@ snapshots/environment=<env>/owner=<owner>/run_date=<yyyymmdd>/run_id=<run_id>/mo
 drift-logs/environment=<env>/owner=<owner>/run_date=<yyyymmdd>/run_id=<run_id>/model_drift_log.json
 reports/environment=<env>/owner=<owner>/run_date=<yyyymmdd>/run_id=<run_id>/report.md
 artifacts/environment=<env>/owner=<owner>/run_date=<yyyymmdd>/run_id=<run_id>/curated_pricing.csv
+curated/environment=<env>/owner=<owner>/run_date=<yyyymmdd>/run_id=<run_id>/curated_pricing.csv
 ```
 
-`input_blob_path`, cuando se use, se resuelve dentro de `MLOPS_CONTAINER_RAW_MASKED`. Si se deja vacio, el workflow usa el sample local sintético/masked y sube solo outputs. `MLOPS_RUN_OWNER` particiona outputs de equipo o usuarios sin crear GitHub environments personales.
+`input_blob_path`, cuando se use, se resuelve dentro de `MLOPS_CONTAINER_RAW_MASKED`. El dataset compartido inicial es `raw-masked/samples/sample_pricing_v1.csv`. Si se deja vacio, el workflow usa el sample local sintético/masked y sube solo outputs. `MLOPS_RUN_OWNER` particiona outputs de equipo o usuarios sin crear GitHub environments personales.
 
 ## Limites
 
