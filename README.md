@@ -50,7 +50,9 @@ Si `FUNCTION_HEALTH_ENDPOINT` apunta solo al host, el script llama `/api/health`
 
 ## Workflow manual contra Azure Storage
 
-El workflow `.github/workflows/model-flow.yml` mantiene los pull requests locales: compila, corre tests, valida el sample y ejecuta el flow sin Azure. Solo el job manual `azure-model-flow` usa `azure/login@v2`, y solo cuando `run_azure_flow=true`.
+El workflow `.github/workflows/model-flow.yml` mantiene los pull requests locales: compila, corre tests, valida el sample y ejecuta el flow local como CI. Solo el job manual `azure-model-flow` usa `azure/login@v2`, y solo cuando `run_azure_flow=true`.
+
+En modo Azure, GitHub Actions no ejecuta scoring/drift como compute principal. GitHub publica el código a Azure Function, invoca `/api/model-flow` y verifica outputs. La Azure Function lee `raw-masked`, ejecuta validacion/curated/scoring/drift y escribe outputs en Storage.
 
 GitHub environments soportados: `staging` y `validation`. `sandbox-local` no se acepta en GitHub Actions.
 
@@ -62,6 +64,8 @@ AZURE_TENANT_ID=<tenant id>
 AZURE_SUBSCRIPTION_ID=<subscription id>
 AZURE_STORAGE_ACCOUNT=stpmlops...
 AZURE_STORAGE_DFS_ENDPOINT=https://stpmlops....dfs.core.windows.net
+AZURE_RESOURCE_GROUP=rg-pricing-mlops-staging
+FUNCTION_APP_NAME=<function-app-name>
 MLOPS_ENVIRONMENT=staging
 MLOPS_RUN_OWNER=team46
 MLOPS_CONTAINER_RAW_MASKED=raw-masked
@@ -80,9 +84,9 @@ Ejecucion:
 3. Seleccionar `environment=staging` o `validation`.
 4. Activar `run_azure_flow=true`.
 5. Usar `run_owner=team46` para corridas compartidas o un usuario para particionar outputs.
-6. Usar `input_blob_path=samples/sample_pricing_v1.csv` para descargar el dataset compartido desde `raw-masked`. Dejarlo vacio solo para usar `data/samples/masked/sample_pricing.csv`.
+6. Usar `input_blob_path=samples/sample_pricing_v1.csv` para que Azure Function lea el dataset compartido desde `raw-masked`.
 
-Los outputs se suben con Azure CLI y `--auth-mode login`, sin account keys ni connection strings:
+Los outputs los escribe Azure Function con Managed Identity y Azure SDK, sin account keys ni connection strings:
 
 ```text
 runs/environment=<env>/owner=<owner>/run_date=<yyyymmdd>/run_id=<run_id>/model_run_log.json
@@ -99,6 +103,7 @@ artifacts/environment=<env>/owner=<owner>/run_date=<yyyymmdd>/run_id=<run_id>/cu
 - No usa `azure/login` en PR.
 - No opera sandboxes personales desde GitHub Actions.
 - No despliega infraestructura desde este repo.
+- No ejecuta el compute ML real en el runner de GitHub Actions.
 - No guarda secretos, connection strings, account keys ni datos unmasked.
 - No sustituye el repo plataforma; consume sus variables, rutas y contratos.
 

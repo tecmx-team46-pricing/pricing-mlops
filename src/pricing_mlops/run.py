@@ -20,7 +20,11 @@ class LocalFlowResult:
     row_count: int
 
 
-def run_local_flow(input_path: str | Path, output_root: str | Path) -> LocalFlowResult:
+def run_local_flow(
+    input_path: str | Path,
+    output_root: str | Path,
+    run_id: str | None = None,
+) -> LocalFlowResult:
     started_at = datetime.now(timezone.utc)
     source_path = Path(input_path)
     output_base = Path(output_root)
@@ -30,7 +34,7 @@ def run_local_flow(input_path: str | Path, output_root: str | Path) -> LocalFlow
     scored = score_pricing(curated)
     drift = evaluate_drift(scored)
 
-    run_id = generate_run_id()
+    run_id = run_id or generate_run_id()
     run_dir = output_base / run_id
     run_dir.mkdir(parents=True, exist_ok=False)
 

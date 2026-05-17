@@ -15,6 +15,8 @@ El repo plataforma publica valores no sensibles por ambiente mediante GitHub env
 - `AZURE_SUBSCRIPTION_ID`
 - `AZURE_STORAGE_ACCOUNT`
 - `AZURE_STORAGE_DFS_ENDPOINT`
+- `AZURE_RESOURCE_GROUP`
+- `FUNCTION_APP_NAME`
 - `AZURE_KEY_VAULT_URI`
 - `MLOPS_CONTAINER_RAW_MASKED`
 - `MLOPS_CONTAINER_CURATED`
@@ -30,7 +32,7 @@ Los secretos reales, salts, account keys y credenciales viven en Key Vault o en 
 
 ## Outputs producidos por este repo
 
-Cada corrida local o futura corrida Azure produce un `run_id` y artefactos mínimos:
+Cada corrida local o corrida Azure produce un `run_id` y artefactos mínimos:
 
 | Archivo | Proposito |
 |---|---|
@@ -40,9 +42,9 @@ Cada corrida local o futura corrida Azure produce un `run_id` y artefactos míni
 | `model_drift_log.json` | Resultado de drift básico con métricas estructuradas por variable. |
 | `report.md` | Resumen humano sin datos sensibles. |
 
-En local se escriben bajo `runs/local/<run_id>/`. En Azure, el layout futuro debe mapear esos artefactos a los contenedores `curated`, `runs`, `snapshots`, `drift-logs`, `reports` y `artifacts`.
+En local se escriben bajo `runs/local/<run_id>/`. En Azure, la Function App escribe esos artefactos a los contenedores `curated`, `runs`, `snapshots`, `drift-logs`, `reports` y `artifacts`.
 
-El primer pipeline Azure minimo usa el output `modelGithubActionsClientId` de `pricing-mlops-platform` como `AZURE_CLIENT_ID`. Ese principal solo requiere `Storage Blob Data Contributor` sobre el Storage Account del ambiente compartido, normalmente `staging`. No requiere `Owner`, `Contributor` de subscription ni Key Vault para este paso.
+El primer pipeline Azure minimo usa el output `modelGithubActionsClientId` de `pricing-mlops-platform` como `AZURE_CLIENT_ID`. Ese principal publica el código en Azure Function, obtiene la function key para invocar `/api/model-flow` y verifica outputs. El procesamiento corre con la managed identity de Azure Function. No requiere `Owner`, `Contributor` de subscription ni acceso a `raw-unmasked`.
 
 ## Layout de subida PoC
 
@@ -55,10 +57,12 @@ artifacts/environment=<env>/owner=<owner>/run_date=<yyyymmdd>/run_id=<run_id>/cu
 curated/environment=<env>/owner=<owner>/run_date=<yyyymmdd>/run_id=<run_id>/curated_pricing.csv
 ```
 
-`input_blob_path`, cuando se use, se resuelve dentro de `MLOPS_CONTAINER_RAW_MASKED`. El dataset compartido inicial es `raw-masked/samples/sample_pricing_v1.csv`. Si se deja vacio, el workflow usa el sample local sintético/masked y sube solo outputs. `MLOPS_RUN_OWNER` particiona outputs de equipo o usuarios sin crear GitHub environments personales.
+`input_blob_path` se resuelve dentro de `MLOPS_CONTAINER_RAW_MASKED`. El dataset compartido inicial es `raw-masked/samples/sample_pricing_v1.csv`. `MLOPS_RUN_OWNER` particiona outputs de equipo o usuarios sin crear GitHub environments personales.
 
 ## Limites
 
 `pricing-mlops` no crea ni modifica infraestructura. La integracion real con Storage/ADLS debe usar identidades y permisos publicados por `pricing-mlops-platform`.
+
+GitHub Actions no es compute ML. En `workflow_dispatch`, GitHub Actions publica el paquete de Azure Function e invoca el endpoint; Azure Function ejecuta validacion, curated, scoring, drift y escritura de artefactos.
 
 Los sandboxes personales como `sandbox-local` se usan solo desde local/admin y no son ambientes soportados por el workflow manual.
