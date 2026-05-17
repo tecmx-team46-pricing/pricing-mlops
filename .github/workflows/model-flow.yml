@@ -25,15 +25,11 @@ on:
         type: string
         required: false
         default: "samples/sample_pricing_v1.csv"
-      run_smoke_health:
-        description: "Run optional environment health smoke test"
-        type: boolean
-        default: false
-
 jobs:
   model-ci:
     name: Model CI
     runs-on: ubuntu-latest
+    if: github.event_name == 'pull_request' || !inputs.run_azure_flow
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -58,25 +54,6 @@ jobs:
       - name: Run local model flow
         run: python scripts/run_local_flow.py --input data/samples/masked/sample_pricing.csv --output runs/local
 
-  smoke-health:
-    name: Environment Health Smoke Test
-    runs-on: ubuntu-latest
-    if: github.event_name == 'workflow_dispatch' && inputs.run_smoke_health
-    environment: ${{ inputs.environment }}
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
-      - name: Set up Python
-        uses: actions/setup-python@v5
-        with:
-          python-version: "3.11"
-
-      - name: Run environment health smoke test
-        env:
-          FUNCTION_HEALTH_ENDPOINT: ${{ vars.FUNCTION_HEALTH_ENDPOINT }}
-        run: python scripts/smoke_health.py
-
   azure-model-flow:
     name: Azure Model Flow
     runs-on: ubuntu-latest
@@ -97,7 +74,10 @@ jobs:
       MLOPS_CONTAINER_REPORTS: ${{ vars.MLOPS_CONTAINER_REPORTS }}
       MLOPS_CONTAINER_ARTIFACTS: ${{ vars.MLOPS_CONTAINER_ARTIFACTS }}
       AZURE_RESOURCE_GROUP: ${{ vars.AZURE_RESOURCE_GROUP }}
-      FUNCTION_APP_NAME: ${{ vars.FUNCTION_APP_NAME }}
+      AZURE_CONTAINER_REGISTRY: ${{ vars.AZURE_CONTAINER_REGISTRY }}
+      AZURE_CONTAINERAPP_JOB_NAME: ${{ vars.AZURE_CONTAINERAPP_JOB_NAME }}
+      AZURE_CONTAINERAPP_JOB_IDENTITY: ${{ vars.AZURE_CONTAINERAPP_JOB_IDENTITY }}
+      AZURE_CONTAINERAPP_JOB_CLIENT_ID: ${{ vars.AZURE_CONTAINERAPP_JOB_CLIENT_ID }}
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -123,7 +103,10 @@ jobs:
             MLOPS_CONTAINER_REPORTS
             MLOPS_CONTAINER_ARTIFACTS
             AZURE_RESOURCE_GROUP
-            FUNCTION_APP_NAME
+            AZURE_CONTAINER_REGISTRY
+            AZURE_CONTAINERAPP_JOB_NAME
+            AZURE_CONTAINERAPP_JOB_IDENTITY
+            AZURE_CONTAINERAPP_JOB_CLIENT_ID
           )
           for name in "${required[@]}"; do
             if [[ -z "${!name:-}" ]]; then
@@ -132,41 +115,75 @@ jobs:
             fi
           done
 
-      - name: Publish Azure Function package
-        uses: Azure/functions-action@v1
-        with:
-          app-name: ${{ env.FUNCTION_APP_NAME }}
-          package: .
-          scm-do-build-during-deployment: true
-          enable-oryx-build: true
+      - name: Build and push model image
+        shell: bash
+        run: |
+          set -euo pipefail
+          login_server="${AZURE_CONTAINER_REGISTRY}.azurecr.io"
+          image="${login_server}/pricing-mlops:${GITHUB_SHA}"
+          az acr login --name "${AZURE_CONTAINER_REGISTRY}"
+          docker build --pull -t "${image}" .
+          docker push "${image}"
+          echo "Container image: ${image}"
+          echo "MODEL_IMAGE=${image}" >> "${GITHUB_ENV}"
 
-      - name: Invoke Azure Function model flow
+      - name: Start Azure model job
         shell: bash
         run: |
           set -euo pipefail
           run_id="$(date -u +%Y%m%dT%H%M%SZ)-${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}"
-          function_key="$(az functionapp function keys list \
-            --resource-group "${AZURE_RESOURCE_GROUP}" \
-            --name "${FUNCTION_APP_NAME}" \
-            --function-name model_flow \
-            --query default -o tsv)"
-          endpoint="https://${FUNCTION_APP_NAME}.azurewebsites.net/api/model-flow?code=${function_key}"
-          payload="$(jq -nc \
-            --arg environment "${MLOPS_ENVIRONMENT}" \
-            --arg run_owner "${MLOPS_RUN_OWNER}" \
-            --arg input_blob_path "${{ inputs.input_blob_path }}" \
-            --arg run_id "${run_id}" \
-            '{environment:$environment, run_owner:$run_owner, input_blob_path:$input_blob_path, run_id:$run_id}')"
-          echo "Azure compute: Function App ${FUNCTION_APP_NAME}"
+          identity_id="/subscriptions/${{ vars.AZURE_SUBSCRIPTION_ID }}/resourceGroups/${AZURE_RESOURCE_GROUP}/providers/Microsoft.ManagedIdentity/userAssignedIdentities/${AZURE_CONTAINERAPP_JOB_IDENTITY}"
+          echo "Azure compute: Container Apps Job ${AZURE_CONTAINERAPP_JOB_NAME}"
           echo "Remote input: ${MLOPS_CONTAINER_RAW_MASKED}/${{ inputs.input_blob_path }}"
           echo "Run id: ${run_id}"
-          response="$(curl --fail-with-body -sS \
-            --request POST \
-            --header "Content-Type: application/json" \
-            --data "${payload}" \
-            "${endpoint}")"
-          echo "${response}" | jq .
           echo "RUN_ID=${run_id}" >> "${GITHUB_ENV}"
+          execution_name="$(az containerapp job start \
+            --name "${AZURE_CONTAINERAPP_JOB_NAME}" \
+            --resource-group "${AZURE_RESOURCE_GROUP}" \
+            --image "${MODEL_IMAGE}" \
+            --registry-identity "${identity_id}" \
+            --cpu 0.25 \
+            --memory 0.5Gi \
+            --env-vars \
+              AZURE_STORAGE_ACCOUNT="${AZURE_STORAGE_ACCOUNT}" \
+              AZURE_CLIENT_ID="${AZURE_CONTAINERAPP_JOB_CLIENT_ID}" \
+              MLOPS_ENVIRONMENT="${MLOPS_ENVIRONMENT}" \
+              MLOPS_RUN_OWNER="${MLOPS_RUN_OWNER}" \
+              MLOPS_RUN_ID="${run_id}" \
+              MLOPS_CONTAINER_RAW_MASKED="${MLOPS_CONTAINER_RAW_MASKED}" \
+              MLOPS_INPUT_BLOB_PATH="${{ inputs.input_blob_path }}" \
+              MLOPS_CONTAINER_CURATED="${MLOPS_CONTAINER_CURATED}" \
+              MLOPS_CONTAINER_RUNS="${MLOPS_CONTAINER_RUNS}" \
+              MLOPS_CONTAINER_SNAPSHOTS="${MLOPS_CONTAINER_SNAPSHOTS}" \
+              MLOPS_CONTAINER_DRIFT_LOGS="${MLOPS_CONTAINER_DRIFT_LOGS}" \
+              MLOPS_CONTAINER_REPORTS="${MLOPS_CONTAINER_REPORTS}" \
+              MLOPS_CONTAINER_ARTIFACTS="${MLOPS_CONTAINER_ARTIFACTS}" \
+            --query name -o tsv)"
+          echo "Azure job execution: ${execution_name}"
+          echo "JOB_EXECUTION_NAME=${execution_name}" >> "${GITHUB_ENV}"
+
+      - name: Wait for Azure model job
+        shell: bash
+        run: |
+          set -euo pipefail
+          for attempt in {1..60}; do
+            execution_json="$(az containerapp job execution show \
+              --name "${AZURE_CONTAINERAPP_JOB_NAME}" \
+              --resource-group "${AZURE_RESOURCE_GROUP}" \
+              --job-execution-name "${JOB_EXECUTION_NAME}" \
+              -o json)"
+            status="$(python -c 'import json,sys; data=json.load(sys.stdin); print(data.get("properties", {}).get("status") or data.get("status") or "")' <<< "${execution_json}")"
+            echo "Azure job status: ${status:-unknown}"
+            if [[ "${status}" == "Succeeded" ]]; then
+              exit 0
+            fi
+            if [[ "${status}" == "Failed" || "${status}" == "Canceled" || "${status}" == "Stopped" ]]; then
+              exit 1
+            fi
+            sleep 15
+          done
+          echo "Timed out waiting for Azure Container Apps Job execution." >&2
+          exit 1
 
       - name: Verify Storage outputs
         shell: bash

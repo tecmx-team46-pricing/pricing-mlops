@@ -19,7 +19,6 @@ class PlatformConfig:
     drift_logs_container: str | None
     reports_container: str | None
     artifacts_container: str | None
-    function_health_endpoint: str | None
 
 
 def load_dotenv(path: str | Path) -> dict[str, str]:
@@ -51,5 +50,4 @@ def platform_config_from_env() -> PlatformConfig:
         drift_logs_container=os.getenv("MLOPS_CONTAINER_DRIFT_LOGS"),
         reports_container=os.getenv("MLOPS_CONTAINER_REPORTS"),
         artifacts_container=os.getenv("MLOPS_CONTAINER_ARTIFACTS"),
-        function_health_endpoint=os.getenv("FUNCTION_HEALTH_ENDPOINT"),
     )

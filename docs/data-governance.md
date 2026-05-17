@@ -17,6 +17,6 @@
 
 Los datos reales y unmasked deben vivir fuera de Git en Storage/ADLS gobernado por `pricing-mlops-platform`. El repo funcional consume `raw-masked`, `curated` y `baseline` con permisos mínimos, y escribe artefactos hacia `runs`, `snapshots`, `drift-logs`, `reports` y `artifacts`.
 
-El workflow manual de Azure no lee ni escribe `raw-unmasked`. El dataset compartido inicial debe vivir en `raw-masked/samples/sample_pricing_v1.csv`; Azure Function lo lee con managed identity y escribe outputs versionados por `environment`, `owner`, `run_date` y `run_id`.
+El workflow manual de Azure no lee ni escribe `raw-unmasked`. El dataset compartido inicial debe vivir en `raw-masked/samples/sample_pricing_v1.csv`; el Container Apps Job lo lee con managed identity y escribe outputs versionados por `environment`, `owner`, `run_date` y `run_id`.
 
 Los sandboxes personales son local/admin only. GitHub Actions del modelo usa ambientes compartidos como `staging` o `validation` y separa corridas con `MLOPS_RUN_OWNER`.

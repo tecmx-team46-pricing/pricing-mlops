@@ -37,22 +37,11 @@ El flow local escribe artefactos en `runs/local/<run_id>/`:
 
 `runs/` esta ignorado por Git.
 
-## Smoke test local/admin de sandbox
-
-Los sandboxes personales no se operan desde GitHub Actions. Para pruebas local/admin, copiar `configs/environments/sandbox-local.example.env` a un archivo local no versionado, completar `FUNCTION_HEALTH_ENDPOINT` y exportarlo:
-
-```bash
-export FUNCTION_HEALTH_ENDPOINT="https://<function-app>.azurewebsites.net"
-python scripts/smoke_health.py
-```
-
-Si `FUNCTION_HEALTH_ENDPOINT` apunta solo al host, el script llama `/api/health`. Si incluye path, usa el endpoint configurado. No requiere Azure login cuando el endpoint es publico.
-
 ## Workflow manual contra Azure Storage
 
 El workflow `.github/workflows/model-flow.yml` mantiene los pull requests locales: compila, corre tests, valida el sample y ejecuta el flow local como CI. Solo el job manual `azure-model-flow` usa `azure/login@v2`, y solo cuando `run_azure_flow=true`.
 
-En modo Azure, GitHub Actions no ejecuta scoring/drift como compute principal. GitHub publica el código a Azure Function, invoca `/api/model-flow` y verifica outputs. La Azure Function lee `raw-masked`, ejecuta validacion/curated/scoring/drift y escribe outputs en Storage.
+En modo Azure, GitHub Actions no ejecuta scoring/drift como compute principal. GitHub construye una imagen Docker, la publica en Azure Container Registry, inicia un Azure Container Apps Job y verifica outputs. El job lee `raw-masked`, ejecuta validacion/curated/scoring/drift y escribe outputs en Storage.
 
 GitHub environments soportados: `staging` y `validation`. `sandbox-local` no se acepta en GitHub Actions.
 
@@ -65,7 +54,10 @@ AZURE_SUBSCRIPTION_ID=<subscription id>
 AZURE_STORAGE_ACCOUNT=stpmlops...
 AZURE_STORAGE_DFS_ENDPOINT=https://stpmlops....dfs.core.windows.net
 AZURE_RESOURCE_GROUP=rg-pricing-mlops-staging
-FUNCTION_APP_NAME=<function-app-name>
+AZURE_CONTAINER_REGISTRY=acrpmlops...
+AZURE_CONTAINERAPP_JOB_NAME=job-pricing-mlops-staging
+AZURE_CONTAINERAPP_JOB_IDENTITY=id-pricing-mlops-job-staging-legacy
+AZURE_CONTAINERAPP_JOB_CLIENT_ID=<job-managed-identity-client-id>
 MLOPS_ENVIRONMENT=staging
 MLOPS_RUN_OWNER=team46
 MLOPS_CONTAINER_RAW_MASKED=raw-masked
@@ -84,9 +76,9 @@ Ejecucion:
 3. Seleccionar `environment=staging` o `validation`.
 4. Activar `run_azure_flow=true`.
 5. Usar `run_owner=team46` para corridas compartidas o un usuario para particionar outputs.
-6. Usar `input_blob_path=samples/sample_pricing_v1.csv` para que Azure Function lea el dataset compartido desde `raw-masked`.
+6. Usar `input_blob_path=samples/sample_pricing_v1.csv` para que el Container Apps Job lea el dataset compartido desde `raw-masked`.
 
-Los outputs los escribe Azure Function con Managed Identity y Azure SDK, sin account keys ni connection strings:
+Los outputs los escribe el Container Apps Job con Managed Identity y Azure SDK, sin account keys ni connection strings:
 
 ```text
 runs/environment=<env>/owner=<owner>/run_date=<yyyymmdd>/run_id=<run_id>/model_run_log.json
