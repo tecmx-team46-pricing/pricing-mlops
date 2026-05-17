@@ -41,7 +41,7 @@ El flow local escribe artefactos en `runs/local/<run_id>/`:
 
 El workflow `.github/workflows/model-flow.yml` mantiene los pull requests locales: compila, corre tests, valida el sample y ejecuta el flow local como CI. Solo el job manual `azure-model-flow` usa `azure/login@v2`, y solo cuando `run_azure_flow=true`.
 
-En modo Azure, GitHub Actions no ejecuta scoring/drift como compute principal. GitHub construye una imagen Docker, la publica en Azure Container Registry, inicia un Azure Container Apps Job y verifica outputs. El job lee `raw-masked`, ejecuta validacion/curated/scoring/drift y escribe outputs en Storage.
+En modo Azure, GitHub Actions no ejecuta scoring/drift como compute principal. GitHub autentica con OIDC, somete un Azure ML command job, espera su resultado y verifica outputs. Azure ML lee `raw-masked`, ejecuta validacion/curated/scoring/drift y escribe outputs en Storage.
 
 GitHub environments soportados: `staging` y `validation`. `sandbox-local` no se acepta en GitHub Actions.
 
@@ -54,13 +54,10 @@ AZURE_SUBSCRIPTION_ID=<subscription id>
 AZURE_STORAGE_ACCOUNT=stpmlops...
 AZURE_STORAGE_DFS_ENDPOINT=https://stpmlops....dfs.core.windows.net
 AZURE_RESOURCE_GROUP=rg-pricing-mlops-staging
-AZURE_CONTAINER_REGISTRY=acrpmlops...
-AZURE_CONTAINERAPP_JOB_NAME=job-pricing-mlops-staging
-AZURE_CONTAINERAPP_JOB_IDENTITY=id-pricing-mlops-job-staging-legacy
-AZURE_CONTAINERAPP_JOB_CLIENT_ID=<job-managed-identity-client-id>
+AZURE_ML_WORKSPACE=mlw-pricing-mlops-staging-...
 MLOPS_ENVIRONMENT=staging
 MLOPS_RUN_OWNER=team46
-MLOPS_COMPUTE_TARGET=container-job
+MLOPS_COMPUTE_TARGET=azure-ml
 MLOPS_CONTAINER_RAW_MASKED=raw-masked
 MLOPS_CONTAINER_CURATED=curated
 MLOPS_CONTAINER_RUNS=runs
@@ -77,9 +74,9 @@ Ejecucion:
 3. Seleccionar `environment=staging` o `validation`.
 4. Activar `run_azure_flow=true`.
 5. Usar `run_owner=team46` para corridas compartidas o un usuario para particionar outputs.
-6. Usar `input_blob_path=samples/sample_pricing_v1.csv` para que el Container Apps Job lea el dataset compartido desde `raw-masked`.
+6. Usar `input_blob_path=samples/sample_pricing_v1.csv` para que Azure ML lea el dataset compartido desde `raw-masked`.
 
-Los outputs los escribe el Container Apps Job con Managed Identity y Azure SDK, sin account keys ni connection strings:
+Los outputs los escribe Azure ML con Managed Identity y Azure SDK, sin account keys ni connection strings:
 
 ```text
 runs/environment=<env>/compute=<target>/owner=<owner>/run_date=<yyyymmdd>/run_id=<run_id>/model_run_log.json
@@ -90,7 +87,7 @@ reports/environment=<env>/compute=<target>/owner=<owner>/run_date=<yyyymmdd>/run
 artifacts/environment=<env>/compute=<target>/owner=<owner>/run_date=<yyyymmdd>/run_id=<run_id>/curated_pricing.csv
 ```
 
-Ver [`docs/compute-target-contract.md`](docs/compute-target-contract.md) para la comparacion Functions vs Container Apps Job.
+Ver [`docs/compute-target-contract.md`](docs/compute-target-contract.md) para el contrato de Azure ML y el rol de Azure Functions como orquestador.
 
 ## Que no hace este repo
 

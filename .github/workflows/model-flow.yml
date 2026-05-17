@@ -29,8 +29,8 @@ on:
         description: "Azure compute target for this manual run"
         type: choice
         options:
-          - container-job
-        default: container-job
+          - azure-ml
+        default: azure-ml
 jobs:
   model-ci:
     name: Model CI
@@ -81,10 +81,7 @@ jobs:
       MLOPS_CONTAINER_REPORTS: ${{ vars.MLOPS_CONTAINER_REPORTS }}
       MLOPS_CONTAINER_ARTIFACTS: ${{ vars.MLOPS_CONTAINER_ARTIFACTS }}
       AZURE_RESOURCE_GROUP: ${{ vars.AZURE_RESOURCE_GROUP }}
-      AZURE_CONTAINER_REGISTRY: ${{ vars.AZURE_CONTAINER_REGISTRY }}
-      AZURE_CONTAINERAPP_JOB_NAME: ${{ vars.AZURE_CONTAINERAPP_JOB_NAME }}
-      AZURE_CONTAINERAPP_JOB_IDENTITY: ${{ vars.AZURE_CONTAINERAPP_JOB_IDENTITY }}
-      AZURE_CONTAINERAPP_JOB_CLIENT_ID: ${{ vars.AZURE_CONTAINERAPP_JOB_CLIENT_ID }}
+      AZURE_ML_WORKSPACE: ${{ vars.AZURE_ML_WORKSPACE }}
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -110,10 +107,7 @@ jobs:
             MLOPS_CONTAINER_REPORTS
             MLOPS_CONTAINER_ARTIFACTS
             AZURE_RESOURCE_GROUP
-            AZURE_CONTAINER_REGISTRY
-            AZURE_CONTAINERAPP_JOB_NAME
-            AZURE_CONTAINERAPP_JOB_IDENTITY
-            AZURE_CONTAINERAPP_JOB_CLIENT_ID
+            AZURE_ML_WORKSPACE
           )
           for name in "${required[@]}"; do
             if [[ -z "${!name:-}" ]]; then
@@ -122,75 +116,59 @@ jobs:
             fi
           done
 
-      - name: Build and push model image
+      - name: Install Azure ML CLI extension
         shell: bash
         run: |
           set -euo pipefail
-          login_server="${AZURE_CONTAINER_REGISTRY}.azurecr.io"
-          image="${login_server}/pricing-mlops:${GITHUB_SHA}"
-          az acr login --name "${AZURE_CONTAINER_REGISTRY}"
-          docker build --pull --platform linux/amd64 -t "${image}" .
-          docker push "${image}"
-          echo "Container image: ${image}"
-          echo "MODEL_IMAGE=${image}" >> "${GITHUB_ENV}"
+          az extension add --name ml --upgrade --yes
 
-      - name: Start Azure model job
+      - name: Submit Azure ML model job
         shell: bash
         run: |
           set -euo pipefail
           run_id="$(date -u +%Y%m%dT%H%M%SZ)-${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}"
-          identity_id="/subscriptions/${{ vars.AZURE_SUBSCRIPTION_ID }}/resourceGroups/${AZURE_RESOURCE_GROUP}/providers/Microsoft.ManagedIdentity/userAssignedIdentities/${AZURE_CONTAINERAPP_JOB_IDENTITY}"
-          echo "Azure compute: Container Apps Job ${AZURE_CONTAINERAPP_JOB_NAME}"
+          echo "Azure compute: Azure Machine Learning workspace ${AZURE_ML_WORKSPACE}"
           echo "Remote input: ${MLOPS_CONTAINER_RAW_MASKED}/${{ inputs.input_blob_path }}"
           echo "Run id: ${run_id}"
           echo "RUN_ID=${run_id}" >> "${GITHUB_ENV}"
-          execution_name="$(az containerapp job start \
-            --name "${AZURE_CONTAINERAPP_JOB_NAME}" \
+          job_name="$(az ml job create \
             --resource-group "${AZURE_RESOURCE_GROUP}" \
-            --image "${MODEL_IMAGE}" \
-            --registry-identity "${identity_id}" \
-            --cpu 0.25 \
-            --memory 0.5Gi \
-            --env-vars \
-              AZURE_STORAGE_ACCOUNT="${AZURE_STORAGE_ACCOUNT}" \
-              AZURE_CLIENT_ID="${AZURE_CONTAINERAPP_JOB_CLIENT_ID}" \
-              MLOPS_ENVIRONMENT="${MLOPS_ENVIRONMENT}" \
-              MLOPS_RUN_OWNER="${MLOPS_RUN_OWNER}" \
-              MLOPS_COMPUTE_TARGET="${MLOPS_COMPUTE_TARGET}" \
-              MLOPS_RUN_ID="${run_id}" \
-              MLOPS_CONTAINER_RAW_MASKED="${MLOPS_CONTAINER_RAW_MASKED}" \
-              MLOPS_INPUT_BLOB_PATH="${{ inputs.input_blob_path }}" \
-              MLOPS_CONTAINER_CURATED="${MLOPS_CONTAINER_CURATED}" \
-              MLOPS_CONTAINER_RUNS="${MLOPS_CONTAINER_RUNS}" \
-              MLOPS_CONTAINER_SNAPSHOTS="${MLOPS_CONTAINER_SNAPSHOTS}" \
-              MLOPS_CONTAINER_DRIFT_LOGS="${MLOPS_CONTAINER_DRIFT_LOGS}" \
-              MLOPS_CONTAINER_REPORTS="${MLOPS_CONTAINER_REPORTS}" \
-              MLOPS_CONTAINER_ARTIFACTS="${MLOPS_CONTAINER_ARTIFACTS}" \
+            --workspace-name "${AZURE_ML_WORKSPACE}" \
+            --file azureml/pricing-mlops-job.yml \
+            --set inputs.storage_account="${AZURE_STORAGE_ACCOUNT}" \
+                  inputs.environment="${MLOPS_ENVIRONMENT}" \
+                  inputs.run_owner="${MLOPS_RUN_OWNER}" \
+                  inputs.run_id="${run_id}" \
+                  inputs.input_blob_path="${{ inputs.input_blob_path }}" \
             --query name -o tsv)"
-          echo "Azure job execution: ${execution_name}"
-          echo "JOB_EXECUTION_NAME=${execution_name}" >> "${GITHUB_ENV}"
+          echo "Azure ML job: ${job_name}"
+          echo "AZURE_ML_JOB_NAME=${job_name}" >> "${GITHUB_ENV}"
 
-      - name: Wait for Azure model job
+      - name: Wait for Azure ML model job
         shell: bash
         run: |
           set -euo pipefail
-          for attempt in {1..60}; do
-            execution_json="$(az containerapp job execution show \
-              --name "${AZURE_CONTAINERAPP_JOB_NAME}" \
+          for attempt in {1..80}; do
+            status="$(az ml job show \
+              --name "${AZURE_ML_JOB_NAME}" \
               --resource-group "${AZURE_RESOURCE_GROUP}" \
-              --job-execution-name "${JOB_EXECUTION_NAME}" \
-              -o json)"
-            status="$(python -c 'import json,sys; data=json.load(sys.stdin); print(data.get("properties", {}).get("status") or data.get("status") or "")' <<< "${execution_json}")"
-            echo "Azure job status: ${status:-unknown}"
-            if [[ "${status}" == "Succeeded" ]]; then
+              --workspace-name "${AZURE_ML_WORKSPACE}" \
+              --query status -o tsv)"
+            echo "Azure ML job status: ${status:-unknown}"
+            if [[ "${status}" == "Completed" ]]; then
               exit 0
             fi
-            if [[ "${status}" == "Failed" || "${status}" == "Canceled" || "${status}" == "Stopped" ]]; then
+            if [[ "${status}" == "Failed" || "${status}" == "Canceled" || "${status}" == "CancelRequested" || "${status}" == "NotResponding" ]]; then
+              az ml job show \
+                --name "${AZURE_ML_JOB_NAME}" \
+                --resource-group "${AZURE_RESOURCE_GROUP}" \
+                --workspace-name "${AZURE_ML_WORKSPACE}" \
+                --query "{name:name,status:status,services:services}" -o json
               exit 1
             fi
             sleep 15
           done
-          echo "Timed out waiting for Azure Container Apps Job execution." >&2
+          echo "Timed out waiting for Azure ML job execution." >&2
           exit 1
 
       - name: Verify Storage outputs

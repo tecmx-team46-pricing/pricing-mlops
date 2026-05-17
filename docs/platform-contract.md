@@ -17,10 +17,7 @@ El repo plataforma publica valores no sensibles por ambiente mediante GitHub env
 - `AZURE_STORAGE_ACCOUNT`
 - `AZURE_STORAGE_DFS_ENDPOINT`
 - `AZURE_RESOURCE_GROUP`
-- `AZURE_CONTAINER_REGISTRY`
-- `AZURE_CONTAINERAPP_JOB_NAME`
-- `AZURE_CONTAINERAPP_JOB_IDENTITY`
-- `AZURE_CONTAINERAPP_JOB_CLIENT_ID`
+- `AZURE_ML_WORKSPACE`
 - `AZURE_KEY_VAULT_URI`
 - `MLOPS_CONTAINER_RAW_MASKED`
 - `MLOPS_CONTAINER_CURATED`
@@ -45,9 +42,9 @@ Cada corrida local o corrida Azure produce un `run_id` y artefactos mínimos:
 | `model_drift_log.json` | Resultado de drift básico con métricas estructuradas por variable. |
 | `report.md` | Resumen humano sin datos sensibles. |
 
-En local se escriben bajo `runs/local/<run_id>/`. En Azure, el Container Apps Job escribe esos artefactos a los contenedores `curated`, `runs`, `snapshots`, `drift-logs`, `reports` y `artifacts`.
+En local se escriben bajo `runs/local/<run_id>/`. En Azure, Azure ML escribe esos artefactos a los contenedores `curated`, `runs`, `snapshots`, `drift-logs`, `reports` y `artifacts`.
 
-El primer pipeline Azure minimo usa el output `modelGithubActionsClientId` de `pricing-mlops-platform` como `AZURE_CLIENT_ID` del runner de GitHub. Ese principal publica la imagen en ACR, inicia el Container Apps Job y verifica outputs. Dentro del contenedor, `AZURE_CLIENT_ID` se configura con `AZURE_CONTAINERAPP_JOB_CLIENT_ID` para que `DefaultAzureCredential` use la managed identity del job. No requiere `Owner`, `Contributor` de subscription ni acceso a `raw-unmasked`.
+El pipeline Azure minimo usa el output `modelGithubActionsClientId` de `pricing-mlops-platform` como `AZURE_CLIENT_ID` del runner de GitHub. Ese principal somete un Azure ML command job y verifica outputs. La ejecucion usa identidad administrada para Storage. No requiere `Owner`, `Contributor` de subscription ni acceso a `raw-unmasked`.
 
 ## Layout de subida PoC
 
@@ -77,6 +74,6 @@ curated/environment=<env>/compute=<target>/owner=<owner>/run_date=<yyyymmdd>/run
 
 `pricing-mlops` no crea ni modifica infraestructura. La integracion real con Storage/ADLS debe usar identidades y permisos publicados por `pricing-mlops-platform`.
 
-GitHub Actions no es compute ML. En `workflow_dispatch`, GitHub Actions construye y publica la imagen, inicia el Container Apps Job y verifica outputs; el job ejecuta validacion, curated, scoring, drift y escritura de artefactos.
+GitHub Actions no es compute ML. En `workflow_dispatch`, GitHub Actions somete el Azure ML command job, espera el resultado y verifica outputs; Azure ML ejecuta validacion, curated, scoring, drift y escritura de artefactos.
 
 Los sandboxes personales como `sandbox-local` se usan solo desde local/admin y no son ambientes soportados por el workflow manual.

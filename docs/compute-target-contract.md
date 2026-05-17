@@ -4,14 +4,21 @@
 
 Este repo debe ejecutar el mismo core de Pricing MLOps en distintos targets de Azure sin duplicar logica:
 
-- Azure Container Apps Job.
-- Azure Functions PoC.
+- Azure Machine Learning command job como ruta activa.
+- Azure Functions como orquestador ligero.
+- Azure Container Apps Job solo como PoC anterior/fallback.
 
-GitHub Actions orquesta. El scoring, drift y escritura de artefactos deben ocurrir dentro del compute target.
+GitHub Actions orquesta. El scoring, drift y escritura de artefactos deben ocurrir dentro de Azure ML, no en el runner de GitHub.
 
 ## Entrypoint comun
 
-El entrypoint reusable es:
+El entrypoint activo para Azure ML es:
+
+```bash
+python scripts/run_azure_ml_flow.py
+```
+
+Ese wrapper fija `MLOPS_COMPUTE_TARGET=azure-ml` y llama al entrypoint reusable:
 
 ```bash
 python scripts/run_azure_storage_flow.py
@@ -38,7 +45,7 @@ Parametros equivalentes:
 ```text
 MLOPS_ENVIRONMENT=staging
 MLOPS_RUN_OWNER=team46
-MLOPS_COMPUTE_TARGET=functions|container-job
+MLOPS_COMPUTE_TARGET=azure-ml
 AZURE_STORAGE_ACCOUNT=<mlops-storage-account>
 MLOPS_CONTAINER_RAW_MASKED=raw-masked
 MLOPS_INPUT_BLOB_PATH=samples/sample_pricing_v1.csv
@@ -50,13 +57,7 @@ MLOPS_CONTAINER_REPORTS=reports
 MLOPS_CONTAINER_ARTIFACTS=artifacts
 ```
 
-Container Apps Job usa user-assigned identity; por eso el contenedor tambien recibe:
-
-```text
-AZURE_CLIENT_ID=<AZURE_CONTAINERAPP_JOB_CLIENT_ID>
-```
-
-Azure Functions PoC debe usar Managed Identity de la Function App. Si se usa system-assigned identity, no requiere `AZURE_CLIENT_ID` dentro del runtime.
+Azure ML debe usar identidad administrada para leer/escribir Storage. Azure Functions debe usar Managed Identity para iniciar el job AML; si Functions sigue bloqueado por quota, GitHub Actions puede someter el job AML temporalmente.
 
 ## Output layout
 
@@ -72,22 +73,30 @@ Si `MLOPS_COMPUTE_TARGET` no esta definido, se conserva el layout previo:
 <container>/environment=<env>/owner=<owner>/run_date=<yyyymmdd>/run_id=<run_id>/<artifact>
 ```
 
-## Azure Functions PoC
+## Azure ML Command Job
+
+`azureml/pricing-mlops-job.yml` define el command job minimo. Usa el mismo codigo del repo, environment Python administrado por Azure ML y `identity: managed`.
+
+El job no crea infraestructura, no usa Docker propio como ruta activa, no usa account keys y escribe outputs bajo `compute=azure-ml`.
+
+Nota operativa: si Azure ML intenta usar key-based auth para artifacts/logs del workspace y el Storage de plataforma tiene shared keys deshabilitadas, la corrida puede fallar antes de ejecutar el script. No habilitar account keys desde este repo; ese ajuste pertenece a `pricing-mlops-platform` y requiere decision explicita de seguridad.
+
+## Azure Functions Orchestrator
 
 `function_app.py` solo envuelve el mismo entrypoint comun:
 
 - `GET /api/health` devuelve estado basico.
-- `POST /api/model-flow` ejecuta `run_azure_storage_flow`.
+- `POST /api/model-flow` debe iniciar un job AML o quedar preparado para hacerlo.
 
-No debe contener logica de pricing propia. Si App Service/Functions no tiene quota disponible, el PoC se considera bloqueado por plataforma y no debe sustituirse con ejecucion en GitHub runner.
+No debe contener logica de pricing propia. Si App Service/Functions no tiene quota disponible, el orquestador queda bloqueado por plataforma y GitHub Actions puede someter AML directamente sin ejecutar ML.
 
-## Container Apps Job
+## Container Apps Job Legacy
 
-`Dockerfile` empaqueta el repo como proceso Python. El job se inicia con `az containerapp job start`, recibe variables del contrato y escribe los mismos outputs.
+`Dockerfile` empaqueta el repo como proceso Python para el PoC anterior. No es la ruta recomendada activa mientras Azure ML sea viable.
 
 ## Comparacion justa
 
-Ambos targets deben usar:
+Los targets deben usar:
 
 - mismo input masked;
 - mismo run owner;

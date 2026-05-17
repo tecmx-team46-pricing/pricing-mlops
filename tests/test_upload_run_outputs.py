@@ -88,9 +88,9 @@ def test_build_upload_plan_can_partition_by_compute_target(tmp_path):
         run_dir,
         environment="staging",
         run_owner="team46",
-        compute_target="container-job",
+        compute_target="azure-ml",
     )
 
     assert plan["runs"].blob_path.startswith(
-        "environment=staging/compute=container-job/owner=team46/"
+        "environment=staging/compute=azure-ml/owner=team46/"
     )

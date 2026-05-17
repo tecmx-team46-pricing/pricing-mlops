@@ -5,8 +5,6 @@ import os
 
 import azure.functions as func
 
-from scripts.run_azure_storage_flow import AzureStorageFlowRequest, run_azure_storage_flow
-
 app = func.FunctionApp(http_auth_level=func.AuthLevel.FUNCTION)
 
 
@@ -17,50 +15,25 @@ def model_flow(req: func.HttpRequest) -> func.HttpResponse:
     except ValueError:
         payload = {}
 
-    request = AzureStorageFlowRequest(
-        storage_account=_required("AZURE_STORAGE_ACCOUNT", payload),
-        environment=payload.get("environment") or os.getenv("MLOPS_ENVIRONMENT", "staging"),
-        run_owner=payload.get("run_owner") or os.getenv("MLOPS_RUN_OWNER", "team46"),
-        compute_target=payload.get("compute_target") or os.getenv("MLOPS_COMPUTE_TARGET", "functions"),
-        run_id=payload.get("run_id") or os.getenv("MLOPS_RUN_ID"),
-        input_container=payload.get("input_container")
-        or os.getenv("MLOPS_CONTAINER_RAW_MASKED", "raw-masked"),
-        input_blob_path=payload.get("input_blob_path")
-        or os.getenv("MLOPS_INPUT_BLOB_PATH", "samples/sample_pricing_v1.csv"),
-        containers={
-            "curated": payload.get("curated_container")
-            or os.getenv("MLOPS_CONTAINER_CURATED", "curated"),
-            "runs": payload.get("runs_container") or os.getenv("MLOPS_CONTAINER_RUNS", "runs"),
-            "snapshots": payload.get("snapshots_container")
-            or os.getenv("MLOPS_CONTAINER_SNAPSHOTS", "snapshots"),
-            "drift_logs": payload.get("drift_logs_container")
-            or os.getenv("MLOPS_CONTAINER_DRIFT_LOGS", "drift-logs"),
-            "reports": payload.get("reports_container") or os.getenv("MLOPS_CONTAINER_REPORTS", "reports"),
-            "artifacts": payload.get("artifacts_container")
-            or os.getenv("MLOPS_CONTAINER_ARTIFACTS", "artifacts"),
-        },
-    )
-
     try:
-        result = run_azure_storage_flow(request)
-    except Exception as exc:
+        request = _orchestration_request(payload)
+    except ValueError as exc:
         return func.HttpResponse(
             json.dumps({"status": "failed", "error": str(exc)}),
-            status_code=500,
+            status_code=400,
             mimetype="application/json",
         )
 
     return func.HttpResponse(
         json.dumps(
             {
-                "status": "succeeded",
-                "run_id": result.run_id,
-                "row_count": result.row_count,
-                "uploaded_blobs": result.uploaded_blobs,
+                "status": "prepared",
+                "message": "Azure Functions is the orchestrator. It must submit an Azure ML job; it does not run scoring locally.",
+                "request": request,
             },
             sort_keys=True,
         ),
-        status_code=200,
+        status_code=202,
         mimetype="application/json",
     )
 
@@ -68,16 +41,35 @@ def model_flow(req: func.HttpRequest) -> func.HttpResponse:
 @app.route(route="health", methods=["GET"])
 def health(req: func.HttpRequest) -> func.HttpResponse:
     return func.HttpResponse(
-        json.dumps({"status": "ok", "compute_target": "functions"}),
+        json.dumps({"status": "ok", "role": "azure-ml-orchestrator"}),
         status_code=200,
         mimetype="application/json",
     )
 
 
+def _orchestration_request(payload: dict[str, object]) -> dict[str, str]:
+    return {
+        "subscription_id": _required("AZURE_SUBSCRIPTION_ID", payload),
+        "resource_group": _required("AZURE_RESOURCE_GROUP", payload),
+        "workspace": _required("AZURE_ML_WORKSPACE", payload),
+        "storage_account": _required("AZURE_STORAGE_ACCOUNT", payload),
+        "environment": _value("MLOPS_ENVIRONMENT", payload, "staging"),
+        "run_owner": _value("MLOPS_RUN_OWNER", payload, "team46"),
+        "compute_target": "azure-ml",
+        "input_container": _value("MLOPS_CONTAINER_RAW_MASKED", payload, "raw-masked"),
+        "input_blob_path": _value("MLOPS_INPUT_BLOB_PATH", payload, "samples/sample_pricing_v1.csv"),
+    }
+
+
 def _required(name: str, payload: dict[str, object]) -> str:
-    value = payload.get(_payload_key(name)) or os.getenv(name)
+    value = _value(name, payload, "")
     if not value:
         raise ValueError(f"{name} is required")
+    return value
+
+
+def _value(name: str, payload: dict[str, object], default: str) -> str:
+    value = payload.get(_payload_key(name)) or os.getenv(name) or default
     return str(value)
 
 
