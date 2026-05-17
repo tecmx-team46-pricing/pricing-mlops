@@ -60,6 +60,7 @@ AZURE_CONTAINERAPP_JOB_IDENTITY=id-pricing-mlops-job-staging-legacy
 AZURE_CONTAINERAPP_JOB_CLIENT_ID=<job-managed-identity-client-id>
 MLOPS_ENVIRONMENT=staging
 MLOPS_RUN_OWNER=team46
+MLOPS_COMPUTE_TARGET=container-job
 MLOPS_CONTAINER_RAW_MASKED=raw-masked
 MLOPS_CONTAINER_CURATED=curated
 MLOPS_CONTAINER_RUNS=runs
@@ -81,13 +82,15 @@ Ejecucion:
 Los outputs los escribe el Container Apps Job con Managed Identity y Azure SDK, sin account keys ni connection strings:
 
 ```text
-runs/environment=<env>/owner=<owner>/run_date=<yyyymmdd>/run_id=<run_id>/model_run_log.json
-curated/environment=<env>/owner=<owner>/run_date=<yyyymmdd>/run_id=<run_id>/curated_pricing.csv
-snapshots/environment=<env>/owner=<owner>/run_date=<yyyymmdd>/run_id=<run_id>/model_output_snapshot.csv
-drift-logs/environment=<env>/owner=<owner>/run_date=<yyyymmdd>/run_id=<run_id>/model_drift_log.json
-reports/environment=<env>/owner=<owner>/run_date=<yyyymmdd>/run_id=<run_id>/report.md
-artifacts/environment=<env>/owner=<owner>/run_date=<yyyymmdd>/run_id=<run_id>/curated_pricing.csv
+runs/environment=<env>/compute=<target>/owner=<owner>/run_date=<yyyymmdd>/run_id=<run_id>/model_run_log.json
+curated/environment=<env>/compute=<target>/owner=<owner>/run_date=<yyyymmdd>/run_id=<run_id>/curated_pricing.csv
+snapshots/environment=<env>/compute=<target>/owner=<owner>/run_date=<yyyymmdd>/run_id=<run_id>/model_output_snapshot.csv
+drift-logs/environment=<env>/compute=<target>/owner=<owner>/run_date=<yyyymmdd>/run_id=<run_id>/model_drift_log.json
+reports/environment=<env>/compute=<target>/owner=<owner>/run_date=<yyyymmdd>/run_id=<run_id>/report.md
+artifacts/environment=<env>/compute=<target>/owner=<owner>/run_date=<yyyymmdd>/run_id=<run_id>/curated_pricing.csv
 ```
+
+Ver [`docs/compute-target-contract.md`](docs/compute-target-contract.md) para la comparacion Functions vs Container Apps Job.
 
 ## Que no hace este repo
 

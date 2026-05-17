@@ -70,3 +70,27 @@ def test_upload_run_outputs_uses_azure_cli_login_auth(tmp_path):
     assert "--account-name" in first_command
     assert "stexample" in first_command
     assert any("owner=team46" in part for part in first_command)
+
+
+def test_build_upload_plan_can_partition_by_compute_target(tmp_path):
+    run_dir = tmp_path / "run-002"
+    run_dir.mkdir()
+    for name in [
+        "model_output_snapshot.csv",
+        "model_drift_log.json",
+        "report.md",
+        "curated_pricing.csv",
+    ]:
+        (run_dir / name).write_text("x")
+    (run_dir / "model_run_log.json").write_text(json.dumps({"run_id": "run-002"}))
+
+    plan = build_upload_plan(
+        run_dir,
+        environment="staging",
+        run_owner="team46",
+        compute_target="container-job",
+    )
+
+    assert plan["runs"].blob_path.startswith(
+        "environment=staging/compute=container-job/owner=team46/"
+    )

@@ -21,7 +21,9 @@ class AzureStorageFlowRequest:
     storage_account: str
     environment: str
     run_owner: str
+    compute_target: str | None
     run_id: str | None
+    output_root: str | None
     input_container: str
     input_blob_path: str
     containers: dict[str, str]
@@ -41,14 +43,19 @@ def main() -> int:
     parser.add_argument("--storage-account", default=os.getenv("AZURE_STORAGE_ACCOUNT"))
     parser.add_argument("--environment", default=os.getenv("MLOPS_ENVIRONMENT", "staging"))
     parser.add_argument("--run-owner", default=os.getenv("MLOPS_RUN_OWNER", "team46"))
+    parser.add_argument("--compute-target", default=os.getenv("MLOPS_COMPUTE_TARGET"))
     parser.add_argument("--run-id", default=os.getenv("MLOPS_RUN_ID"))
+    parser.add_argument("--output-root", default=os.getenv("MLOPS_OUTPUT_ROOT"))
     parser.add_argument(
         "--input-container",
         default=os.getenv("MLOPS_CONTAINER_RAW_MASKED", "raw-masked"),
     )
     parser.add_argument(
         "--input-blob-path",
-        default=os.getenv("MLOPS_INPUT_BLOB_PATH", "samples/sample_pricing_v1.csv"),
+        default=os.getenv(
+            "MLOPS_INPUT_BLOB_PATH",
+            os.getenv("INPUT_BLOB_PATH", "samples/sample_pricing_v1.csv"),
+        ),
     )
     parser.add_argument("--curated-container", default=os.getenv("MLOPS_CONTAINER_CURATED", "curated"))
     parser.add_argument("--runs-container", default=os.getenv("MLOPS_CONTAINER_RUNS", "runs"))
@@ -66,7 +73,9 @@ def main() -> int:
         storage_account=args.storage_account,
         environment=args.environment,
         run_owner=args.run_owner,
+        compute_target=args.compute_target,
         run_id=args.run_id,
+        output_root=args.output_root,
         input_container=args.input_container,
         input_blob_path=args.input_blob_path,
         containers={
@@ -106,52 +115,67 @@ def run_azure_storage_flow(request: AzureStorageFlowRequest) -> AzureStorageFlow
         f"blob_path={request.input_blob_path}"
     )
 
-    with tempfile.TemporaryDirectory(prefix="pricing-mlops-") as tmpdir:
-        tmp_path = Path(tmpdir)
-        input_path = tmp_path / "input.csv"
-        output_root = tmp_path / "runs"
-
-        input_blob = blob_service.get_blob_client(
-            container=request.input_container,
-            blob=request.input_blob_path,
-        )
-        input_path.write_bytes(input_blob.download_blob().readall())
-
-        result = run_local_flow(
-            input_path=input_path,
-            output_root=output_root,
-            run_id=request.run_id,
-        )
-        print(f"azure flow run: run_id={result.run_id} run_dir={result.run_dir}")
-
-        plan = build_upload_plan(
-            run_dir=result.run_dir,
-            environment=request.environment,
-            run_owner=request.run_owner,
-            containers=request.containers,
-        )
-
-        uploaded_blobs: dict[str, str] = {}
-        for target in plan.values():
-            print(
-                "azure flow upload plan: "
-                f"container={target.container} "
-                f"blob_path={target.blob_path} "
-                f"source={target.source.name}"
-            )
-            output_blob = blob_service.get_blob_client(
-                container=target.container,
-                blob=target.blob_path,
-            )
-            with target.source.open("rb") as handle:
-                output_blob.upload_blob(handle, overwrite=True)
-            uploaded_blobs[target.container] = target.blob_path
+    if request.output_root:
+        output_root = Path(request.output_root)
+        output_root.mkdir(parents=True, exist_ok=True)
+        with tempfile.TemporaryDirectory(prefix="pricing-mlops-input-") as tmpdir:
+            result, uploaded_blobs = _run_and_upload(request, blob_service, Path(tmpdir), output_root)
+    else:
+        with tempfile.TemporaryDirectory(prefix="pricing-mlops-") as tmpdir:
+            tmp_path = Path(tmpdir)
+            result, uploaded_blobs = _run_and_upload(request, blob_service, tmp_path, tmp_path / "runs")
 
     return AzureStorageFlowResult(
         run_id=result.run_id,
         row_count=result.row_count,
         uploaded_blobs=uploaded_blobs,
     )
+
+
+def _run_and_upload(
+    request: AzureStorageFlowRequest,
+    blob_service,
+    tmp_path: Path,
+    output_root: Path,
+):
+    input_path = tmp_path / "input.csv"
+    input_blob = blob_service.get_blob_client(
+        container=request.input_container,
+        blob=request.input_blob_path,
+    )
+    input_path.write_bytes(input_blob.download_blob().readall())
+
+    result = run_local_flow(
+        input_path=input_path,
+        output_root=output_root,
+        run_id=request.run_id,
+    )
+    print(f"azure flow run: run_id={result.run_id} run_dir={result.run_dir}")
+
+    plan = build_upload_plan(
+        run_dir=result.run_dir,
+        environment=request.environment,
+        run_owner=request.run_owner,
+        compute_target=request.compute_target,
+        containers=request.containers,
+    )
+
+    uploaded_blobs: dict[str, str] = {}
+    for target in plan.values():
+        print(
+            "azure flow upload plan: "
+            f"container={target.container} "
+            f"blob_path={target.blob_path} "
+            f"source={target.source.name}"
+        )
+        output_blob = blob_service.get_blob_client(
+            container=target.container,
+            blob=target.blob_path,
+        )
+        with target.source.open("rb") as handle:
+            output_blob.upload_blob(handle, overwrite=True)
+        uploaded_blobs[target.container] = target.blob_path
+    return result, uploaded_blobs
 
 
 if __name__ == "__main__":

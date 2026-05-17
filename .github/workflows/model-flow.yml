@@ -25,6 +25,12 @@ on:
         type: string
         required: false
         default: "samples/sample_pricing_v1.csv"
+      compute_target:
+        description: "Azure compute target for this manual run"
+        type: choice
+        options:
+          - container-job
+        default: container-job
 jobs:
   model-ci:
     name: Model CI
@@ -65,6 +71,7 @@ jobs:
     env:
       MLOPS_ENVIRONMENT: ${{ inputs.environment }}
       MLOPS_RUN_OWNER: ${{ inputs.run_owner }}
+      MLOPS_COMPUTE_TARGET: ${{ inputs.compute_target }}
       AZURE_STORAGE_ACCOUNT: ${{ vars.AZURE_STORAGE_ACCOUNT }}
       MLOPS_CONTAINER_RAW_MASKED: ${{ vars.MLOPS_CONTAINER_RAW_MASKED }}
       MLOPS_CONTAINER_CURATED: ${{ vars.MLOPS_CONTAINER_CURATED }}
@@ -122,7 +129,7 @@ jobs:
           login_server="${AZURE_CONTAINER_REGISTRY}.azurecr.io"
           image="${login_server}/pricing-mlops:${GITHUB_SHA}"
           az acr login --name "${AZURE_CONTAINER_REGISTRY}"
-          docker build --pull -t "${image}" .
+          docker build --pull --platform linux/amd64 -t "${image}" .
           docker push "${image}"
           echo "Container image: ${image}"
           echo "MODEL_IMAGE=${image}" >> "${GITHUB_ENV}"
@@ -149,6 +156,7 @@ jobs:
               AZURE_CLIENT_ID="${AZURE_CONTAINERAPP_JOB_CLIENT_ID}" \
               MLOPS_ENVIRONMENT="${MLOPS_ENVIRONMENT}" \
               MLOPS_RUN_OWNER="${MLOPS_RUN_OWNER}" \
+              MLOPS_COMPUTE_TARGET="${MLOPS_COMPUTE_TARGET}" \
               MLOPS_RUN_ID="${run_id}" \
               MLOPS_CONTAINER_RAW_MASKED="${MLOPS_CONTAINER_RAW_MASKED}" \
               MLOPS_INPUT_BLOB_PATH="${{ inputs.input_blob_path }}" \
@@ -190,7 +198,7 @@ jobs:
         run: |
           set -euo pipefail
           run_date="${RUN_ID:0:8}"
-          prefix="environment=${MLOPS_ENVIRONMENT}/owner=${MLOPS_RUN_OWNER}/run_date=${run_date}/run_id=${RUN_ID}"
+          prefix="environment=${MLOPS_ENVIRONMENT}/compute=${MLOPS_COMPUTE_TARGET}/owner=${MLOPS_RUN_OWNER}/run_date=${run_date}/run_id=${RUN_ID}"
           outputs=(
             "${MLOPS_CONTAINER_RUNS}:${prefix}/model_run_log.json"
             "${MLOPS_CONTAINER_SNAPSHOTS}:${prefix}/model_output_snapshot.csv"

@@ -27,6 +27,7 @@ def main() -> int:
     parser.add_argument("--storage-account", default=os.getenv("AZURE_STORAGE_ACCOUNT"))
     parser.add_argument("--environment", default=os.getenv("MLOPS_ENVIRONMENT", "staging"))
     parser.add_argument("--run-owner", default=os.getenv("MLOPS_RUN_OWNER", "team46"))
+    parser.add_argument("--compute-target", default=os.getenv("MLOPS_COMPUTE_TARGET"))
     parser.add_argument("--curated-container", default=os.getenv("MLOPS_CONTAINER_CURATED", "curated"))
     parser.add_argument("--runs-container", default=os.getenv("MLOPS_CONTAINER_RUNS", "runs"))
     parser.add_argument("--snapshots-container", default=os.getenv("MLOPS_CONTAINER_SNAPSHOTS", "snapshots"))
@@ -45,6 +46,7 @@ def main() -> int:
             storage_account=args.storage_account,
             environment=args.environment,
             run_owner=args.run_owner,
+            compute_target=args.compute_target,
             containers={
                 "curated": args.curated_container,
                 "runs": args.runs_container,
@@ -68,6 +70,7 @@ def upload_run_outputs(
     environment: str,
     run_owner: str,
     containers: dict[str, str],
+    compute_target: str | None = None,
     runner: Runner | None = None,
 ) -> None:
     command_runner = runner or _run_command
@@ -75,6 +78,7 @@ def upload_run_outputs(
         run_dir=run_dir,
         environment=environment,
         run_owner=run_owner,
+        compute_target=compute_target,
         containers=containers,
     )
 
@@ -111,6 +115,7 @@ def build_upload_plan(
     run_dir: Path,
     environment: str,
     run_owner: str = "team46",
+    compute_target: str | None = None,
     containers: dict[str, str] | None = None,
 ) -> dict[str, UploadTarget]:
     resolved_run_dir = Path(run_dir)
@@ -127,7 +132,17 @@ def build_upload_plan(
     }
     run_id = _run_id_from_log(resolved_run_dir)
     run_date = run_id[:8] if len(run_id) >= 8 else "unknown"
-    prefix = f"environment={environment}/owner={run_owner}/run_date={run_date}/run_id={run_id}"
+    prefix_parts = [f"environment={environment}"]
+    if compute_target:
+        prefix_parts.append(f"compute={compute_target}")
+    prefix_parts.extend(
+        [
+            f"owner={run_owner}",
+            f"run_date={run_date}",
+            f"run_id={run_id}",
+        ]
+    )
+    prefix = "/".join(prefix_parts)
 
     files = {
         "curated": "curated_pricing.csv",
