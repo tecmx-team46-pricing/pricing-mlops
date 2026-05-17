@@ -8,7 +8,7 @@ Este repo debe ejecutar el mismo core de Pricing MLOps en distintos targets de A
 - Azure Functions como orquestador ligero.
 - Azure Container Apps Job solo como PoC anterior/fallback.
 
-Azure Functions orquesta la ruta objetivo. GitHub Actions despliega o dispara operaciones controladas. El scoring, drift y escritura de artefactos deben ocurrir dentro de Azure ML, no en el runner de GitHub ni dentro de la Function.
+Azure Functions orquesta la ruta operativa. GitHub Actions queda para CI/CD, publicacion de Function y pruebas controladas. El scoring, drift y escritura de artefactos deben ocurrir dentro de Azure ML, no en el runner de GitHub ni dentro de la Function.
 
 ## Entrypoint comun
 
@@ -57,7 +57,7 @@ MLOPS_CONTAINER_REPORTS=reports
 MLOPS_CONTAINER_ARTIFACTS=artifacts
 ```
 
-Azure ML usa Entra ID para leer/escribir Storage. Azure Functions usa Managed Identity para iniciar el job AML; si Functions sigue bloqueado por quota, GitHub Actions puede someter el job AML temporalmente.
+Azure ML usa Entra ID para leer/escribir Storage. Azure Functions usa Managed Identity para iniciar el job AML. El fallback `direct-aml` desde GitHub Actions queda solo para emergencia si la Function no esta disponible.
 
 ## Output layout
 
@@ -90,7 +90,7 @@ El bloqueo inicial `KeyBasedAuthenticationNotPermitted` se resolvio desde `prici
 - `GET /api/health` devuelve estado basico.
 - `POST /api/model-flow` valida `environment`, `run_owner` e `input_blob_path`, genera o acepta `run_id`, somete el job AML y devuelve `azure_ml_job_name` con el prefijo esperado de outputs.
 
-No debe contener logica de pricing propia. Si App Service/Functions no tiene quota disponible, el orquestador queda bloqueado por plataforma y GitHub Actions puede someter AML directamente sin ejecutar ML.
+No debe contener logica de pricing propia. En `staging`, la Function se despliega en `centralus` y orquesta Azure ML contra Storage/AML en `eastus2`. Si App Service/Functions no tiene quota disponible, el orquestador queda bloqueado por plataforma y GitHub Actions puede someter AML directamente como emergencia sin ejecutar ML.
 
 ## Container Apps Job Legacy
 

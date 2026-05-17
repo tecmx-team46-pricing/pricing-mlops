@@ -138,14 +138,13 @@ def submit_azure_ml_job(request: dict[str, str]) -> dict[str, str | bool]:
         request["workspace"],
     )
     job = load_job(source=JOB_FILE)
-    for key, value in {
+    _apply_job_inputs(job, {
         "storage_account": request["storage_account"],
         "environment": request["environment"],
         "run_owner": request["run_owner"],
         "run_id": request["run_id"],
         "input_blob_path": request["input_blob_path"],
-    }.items():
-        job.inputs[key]._data = value
+    })
     created = client.jobs.create_or_update(job)
     return {
         "accepted": True,
@@ -153,6 +152,19 @@ def submit_azure_ml_job(request: dict[str, str]) -> dict[str, str | bool]:
         "run_id": request["run_id"],
         "expected_output_prefix": request["expected_output_prefix"],
     }
+
+
+def _apply_job_inputs(job, values: dict[str, str]) -> None:
+    for key, value in values.items():
+        if hasattr(job, "_job_inputs") and key in job._job_inputs:
+            job._job_inputs[key] = value
+        node_input = job.inputs[key]
+        node_input._data = value
+        node_input._original_data = value
+        if hasattr(node_input, "_meta") and isinstance(node_input._meta, dict):
+            node_input._meta["default"] = value
+        if getattr(job, "component", None) is not None and key in job.component.inputs:
+            job.component.inputs[key]["default"] = value
 
 
 def _azure_credential():

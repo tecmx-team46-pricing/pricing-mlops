@@ -41,7 +41,7 @@ El flow local escribe artefactos en `runs/local/<run_id>/`:
 
 El workflow `.github/workflows/model-flow.yml` mantiene los pull requests locales: compila, corre tests, valida el sample y ejecuta el flow local como CI. Solo el job manual `azure-model-flow` usa `azure/login@v2`, y solo cuando `run_azure_flow=true`.
 
-En modo Azure, GitHub Actions no ejecuta scoring/drift como compute principal. La ruta objetivo llama a Azure Functions como orquestador; la Function valida parametros, somete un Azure ML command job, y Azure ML lee `raw-masked`, ejecuta validacion/curated/scoring/drift y escribe outputs en Storage. El submit directo a AML queda como fallback temporal si Functions no esta disponible.
+En modo Azure, GitHub Actions no ejecuta scoring/drift como compute principal ni es requerido para operar el flujo. La ruta operativa llama a Azure Functions como orquestador; la Function valida parametros, somete un Azure ML command job, y Azure ML lee `raw-masked`, ejecuta validacion/curated/scoring/drift y escribe outputs en Storage. El submit directo a AML queda como fallback de emergencia si Functions no esta disponible.
 
 GitHub environments soportados: `staging` y `validation`. `sandbox-local` no se acepta en GitHub Actions.
 
@@ -76,7 +76,15 @@ Ejecucion:
 4. Activar `run_azure_flow=true`.
 5. Usar `run_owner=team46` para corridas compartidas o un usuario para particionar outputs.
 6. Usar `input_blob_path=samples/sample_pricing_v1.csv` para que Azure ML lea el dataset compartido desde `raw-masked`.
-7. Usar `orchestration_target=function` si la Function esta desplegada; `direct-aml` queda como fallback temporal. En la subscription actual, el deploy de Function puede seguir bloqueado por quota App Service/Functions `Total VMs=0`.
+7. Usar `orchestration_target=function`. `direct-aml` queda como fallback de emergencia, no como operacion normal.
+
+La Function de `staging` esta desplegada como:
+
+```text
+https://func-pricing-mlops-staging-<suffix>.azurewebsites.net/api/model-flow
+```
+
+El trigger manual directo a la Function no requiere GitHub Actions; requiere una function key o el mecanismo de autenticacion que el equipo apruebe para el siguiente hardening.
 
 Los outputs los escribe Azure ML con Entra ID y Azure SDK, sin account keys ni connection strings. En GitHub el command job usa `identity: user_identity`, que corresponde a la UAMI OIDC del repo modelo:
 

@@ -36,8 +36,9 @@ if [[ "${ACTIVE_SUBSCRIPTION_NAME}" != "${EXPECTED_SUBSCRIPTION_NAME}" ]]; then
   exit 1
 fi
 
-PACKAGE_PATH="$(mktemp -t pricing-mlops-function.XXXXXX.zip)"
-trap 'rm -f "${PACKAGE_PATH}"' EXIT
+PACKAGE_DIR="$(mktemp -d)"
+PACKAGE_PATH="${PACKAGE_DIR}/pricing-mlops-function.zip"
+trap 'rm -rf "${PACKAGE_DIR}"' EXIT
 
 zip -qr "${PACKAGE_PATH}" \
   function_app.py \

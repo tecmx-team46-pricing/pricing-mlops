@@ -79,6 +79,16 @@ def test_model_flow_submits_aml_job(monkeypatch):
     assert submitted["run_id"] == "20260517T000000Z-function"
 
 
+def test_apply_job_inputs_updates_loaded_azure_ml_defaults():
+    from azure.ai.ml import load_job
+
+    job = load_job(source="azureml/pricing-mlops-job.yml")
+    function_app._apply_job_inputs(job, {"run_id": "run-from-function"})
+
+    assert job._to_dict()["inputs"]["run_id"] == "run-from-function"
+    assert job.component.inputs["run_id"]["default"] == "run-from-function"
+
+
 def test_model_flow_rejects_unsafe_owner(monkeypatch):
     _set_required_env(monkeypatch)
     request = func.HttpRequest(

@@ -32,7 +32,7 @@ on:
           - azure-ml
         default: azure-ml
       orchestration_target:
-        description: "Control plane used to start the Azure ML job"
+        description: "Control plane used to start the Azure ML job; direct-aml is emergency fallback only"
         type: choice
         options:
           - function
@@ -168,7 +168,7 @@ jobs:
           echo "Azure ML job: ${job_name}"
           echo "AZURE_ML_JOB_NAME=${job_name}" >> "${GITHUB_ENV}"
 
-      - name: Submit Azure ML model job directly
+      - name: Submit Azure ML model job directly emergency fallback
         if: inputs.orchestration_target == 'direct-aml'
         shell: bash
         run: |
