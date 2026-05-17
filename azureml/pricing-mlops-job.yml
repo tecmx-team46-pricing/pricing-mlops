@@ -3,8 +3,9 @@ type: command
 display_name: pricing-mlops-flow
 experiment_name: pricing-mlops
 description: Minimal Pricing MLOps flow over shared masked input.
-code: .
+code: ..
 command: >-
+  python -m pip install -e . &&
   python scripts/run_azure_ml_flow.py
   --storage-account ${{inputs.storage_account}}
   --environment ${{inputs.environment}}
@@ -17,7 +18,7 @@ environment:
   image: mcr.microsoft.com/azureml/openmpi4.1.0-ubuntu22.04:latest
   conda_file: environment.yml
 identity:
-  type: managed
+  type: user_identity
 inputs:
   storage_account: <mlops-storage-account>
   environment: staging

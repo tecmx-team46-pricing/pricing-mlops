@@ -75,11 +75,13 @@ Si `MLOPS_COMPUTE_TARGET` no esta definido, se conserva el layout previo:
 
 ## Azure ML Command Job
 
-`azureml/pricing-mlops-job.yml` define el command job minimo. Usa el mismo codigo del repo, environment Python administrado por Azure ML y `identity: managed`.
+`azureml/pricing-mlops-job.yml` define el command job minimo. Usa el mismo codigo del repo, environment Python administrado por Azure ML y `identity: user_identity`.
 
 El job no crea infraestructura, no usa Docker propio como ruta activa, no usa account keys y escribe outputs bajo `compute=azure-ml`.
 
-Nota operativa: si Azure ML intenta usar key-based auth para artifacts/logs del workspace y el Storage de plataforma tiene shared keys deshabilitadas, la corrida puede fallar antes de ejecutar el script. No habilitar account keys desde este repo; ese ajuste pertenece a `pricing-mlops-platform` y requiere decision explicita de seguridad.
+Nota operativa: con serverless AML, `user_identity` permite que el script use `AzureMLOnBehalfOfCredential`. En GitHub esa identidad es la UAMI OIDC del repo modelo; en ejecuciones locales es la identidad Entra del usuario que somete el job. El Storage MLOps principal mantiene account keys deshabilitadas.
+
+El bloqueo inicial `KeyBasedAuthenticationNotPermitted` se resolvio desde `pricing-mlops-platform` configurando el workspace con `systemDatastoresAuthMode=identity`. El ACR asociado de AML requiere `AcrPull` para las identidades de AML porque Azure ML lo usa para imagenes de runtime; eso no reactiva Container Apps/ACR como ruta de compute.
 
 ## Azure Functions Orchestrator
 

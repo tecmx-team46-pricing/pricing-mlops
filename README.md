@@ -76,7 +76,7 @@ Ejecucion:
 5. Usar `run_owner=team46` para corridas compartidas o un usuario para particionar outputs.
 6. Usar `input_blob_path=samples/sample_pricing_v1.csv` para que Azure ML lea el dataset compartido desde `raw-masked`.
 
-Los outputs los escribe Azure ML con Managed Identity y Azure SDK, sin account keys ni connection strings:
+Los outputs los escribe Azure ML con Entra ID y Azure SDK, sin account keys ni connection strings. En GitHub el command job usa `identity: user_identity`, que corresponde a la UAMI OIDC del repo modelo:
 
 ```text
 runs/environment=<env>/compute=<target>/owner=<owner>/run_date=<yyyymmdd>/run_id=<run_id>/model_run_log.json

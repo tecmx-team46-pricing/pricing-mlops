@@ -44,7 +44,7 @@ Cada corrida local o corrida Azure produce un `run_id` y artefactos mínimos:
 
 En local se escriben bajo `runs/local/<run_id>/`. En Azure, Azure ML escribe esos artefactos a los contenedores `curated`, `runs`, `snapshots`, `drift-logs`, `reports` y `artifacts`.
 
-El pipeline Azure minimo usa el output `modelGithubActionsClientId` de `pricing-mlops-platform` como `AZURE_CLIENT_ID` del runner de GitHub. Ese principal somete un Azure ML command job y verifica outputs. La ejecucion usa identidad administrada para Storage. No requiere `Owner`, `Contributor` de subscription ni acceso a `raw-unmasked`.
+El pipeline Azure minimo usa el output `modelGithubActionsClientId` de `pricing-mlops-platform` como `AZURE_CLIENT_ID` del runner de GitHub. Ese principal somete un Azure ML command job y verifica outputs. El job usa `identity: user_identity`, por lo que en GitHub el acceso a Storage ocurre con esa misma UAMI OIDC mediante `AzureMLOnBehalfOfCredential`. No requiere `Owner`, `Contributor` de subscription ni acceso a `raw-unmasked`.
 
 ## Layout de subida PoC
 

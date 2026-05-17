@@ -3,6 +3,7 @@ from __future__ import annotations
 
 import argparse
 from dataclasses import dataclass
+from datetime import datetime, timezone
 import os
 from pathlib import Path
 import sys
@@ -74,7 +75,7 @@ def main() -> int:
         environment=args.environment,
         run_owner=args.run_owner,
         compute_target=args.compute_target,
-        run_id=args.run_id,
+        run_id=resolve_run_id(args.run_id),
         output_root=args.output_root,
         input_container=args.input_container,
         input_blob_path=args.input_blob_path,
@@ -99,13 +100,12 @@ def main() -> int:
 
 def run_azure_storage_flow(request: AzureStorageFlowRequest) -> AzureStorageFlowResult:
     try:
-        from azure.identity import DefaultAzureCredential
         from azure.storage.blob import BlobServiceClient
     except ImportError as exc:
         raise RuntimeError(f"Azure SDK dependency is missing: {exc}") from exc
 
     account_url = f"https://{request.storage_account}.blob.core.windows.net"
-    credential = DefaultAzureCredential()
+    credential = build_azure_credential()
     blob_service = BlobServiceClient(account_url=account_url, credential=credential)
 
     print(
@@ -130,6 +130,26 @@ def run_azure_storage_flow(request: AzureStorageFlowRequest) -> AzureStorageFlow
         row_count=result.row_count,
         uploaded_blobs=uploaded_blobs,
     )
+
+
+def build_azure_credential():
+    if os.getenv("AZUREML_RUN_ID"):
+        try:
+            from azure.ai.ml.identity import AzureMLOnBehalfOfCredential
+
+            return AzureMLOnBehalfOfCredential()
+        except ImportError:
+            pass
+
+    from azure.identity import DefaultAzureCredential
+
+    return DefaultAzureCredential()
+
+
+def resolve_run_id(run_id: str | None) -> str | None:
+    if os.getenv("AZUREML_RUN_ID") and (not run_id or run_id == "manual"):
+        return datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%SZ-azure-ml")
+    return run_id
 
 
 def _run_and_upload(
