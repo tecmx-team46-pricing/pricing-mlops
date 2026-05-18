@@ -5,7 +5,7 @@ on:
   workflow_dispatch:
     inputs:
       environment:
-        description: "GitHub/Azure environment to use"
+        description: "Azure environment"
         type: choice
         options:
           - staging
@@ -17,38 +17,24 @@ on:
         required: false
         default: team46
       run_azure_flow:
-        description: "Run model flow and upload outputs to Azure Storage"
+        description: "Call Azure Function and wait for Azure ML outputs"
         type: boolean
         default: false
       input_blob_path:
-        description: "Optional blob path under MLOPS_CONTAINER_RAW_MASKED to use as input"
+        description: "Blob path under raw-masked"
         type: string
         required: false
         default: "samples/sample_pricing_v1.csv"
-      compute_target:
-        description: "Azure compute target for this manual run"
-        type: choice
-        options:
-          - azure-ml
-        default: azure-ml
-      orchestration_target:
-        description: "Control plane used to start the Azure ML job; direct-aml is emergency fallback only"
-        type: choice
-        options:
-          - function
-          - direct-aml
-        default: function
+
 jobs:
   model-ci:
     name: Model CI
     runs-on: ubuntu-latest
     if: github.event_name == 'pull_request' || !inputs.run_azure_flow
     steps:
-      - name: Checkout
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
 
-      - name: Set up Python
-        uses: actions/setup-python@v5
+      - uses: actions/setup-python@v5
         with:
           python-version: "3.11"
 
@@ -56,7 +42,7 @@ jobs:
         run: python -m pip install -e ".[dev]"
 
       - name: Compile Python files
-        run: python -m compileall src scripts tests
+        run: python -m compileall src scripts tests function_app.py
 
       - name: Run tests
         run: python -m pytest
@@ -76,9 +62,9 @@ jobs:
       contents: read
       id-token: write
     env:
-      MLOPS_ENVIRONMENT: ${{ inputs.environment }}
-      MLOPS_RUN_OWNER: ${{ inputs.run_owner }}
-      MLOPS_COMPUTE_TARGET: ${{ inputs.compute_target }}
+      AZURE_FUNCTION_APP: ${{ vars.AZURE_FUNCTION_APP }}
+      AZURE_RESOURCE_GROUP: ${{ vars.AZURE_RESOURCE_GROUP }}
+      AZURE_ML_WORKSPACE: ${{ vars.AZURE_ML_WORKSPACE }}
       AZURE_STORAGE_ACCOUNT: ${{ vars.AZURE_STORAGE_ACCOUNT }}
       MLOPS_CONTAINER_RAW_MASKED: ${{ vars.MLOPS_CONTAINER_RAW_MASKED }}
       MLOPS_CONTAINER_CURATED: ${{ vars.MLOPS_CONTAINER_CURATED }}
@@ -87,26 +73,23 @@ jobs:
       MLOPS_CONTAINER_DRIFT_LOGS: ${{ vars.MLOPS_CONTAINER_DRIFT_LOGS }}
       MLOPS_CONTAINER_REPORTS: ${{ vars.MLOPS_CONTAINER_REPORTS }}
       MLOPS_CONTAINER_ARTIFACTS: ${{ vars.MLOPS_CONTAINER_ARTIFACTS }}
-      AZURE_RESOURCE_GROUP: ${{ vars.AZURE_RESOURCE_GROUP }}
-      AZURE_ML_WORKSPACE: ${{ vars.AZURE_ML_WORKSPACE }}
-      AZURE_FUNCTION_APP: ${{ vars.AZURE_FUNCTION_APP }}
-      INPUT_BLOB_PATH: ${{ inputs.input_blob_path }}
     steps:
-      - name: Checkout
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
 
-      - name: Azure login
-        uses: azure/login@v2
+      - uses: azure/login@v2
         with:
           client-id: ${{ vars.AZURE_CLIENT_ID }}
           tenant-id: ${{ vars.AZURE_TENANT_ID }}
           subscription-id: ${{ vars.AZURE_SUBSCRIPTION_ID }}
 
-      - name: Validate Azure orchestration variables
+      - name: Validate Azure variables
         shell: bash
         run: |
           set -euo pipefail
           required=(
+            AZURE_FUNCTION_APP
+            AZURE_RESOURCE_GROUP
+            AZURE_ML_WORKSPACE
             AZURE_STORAGE_ACCOUNT
             MLOPS_CONTAINER_RAW_MASKED
             MLOPS_CONTAINER_CURATED
@@ -115,12 +98,7 @@ jobs:
             MLOPS_CONTAINER_DRIFT_LOGS
             MLOPS_CONTAINER_REPORTS
             MLOPS_CONTAINER_ARTIFACTS
-            AZURE_RESOURCE_GROUP
-            AZURE_ML_WORKSPACE
           )
-          if [[ "${{ inputs.orchestration_target }}" == "function" ]]; then
-            required+=(AZURE_FUNCTION_APP)
-          fi
           for name in "${required[@]}"; do
             if [[ -z "${!name:-}" ]]; then
               echo "Missing required GitHub environment variable: ${name}" >&2
@@ -128,121 +106,6 @@ jobs:
             fi
           done
 
-      - name: Install Azure ML CLI extension
+      - name: Call Azure Function orchestrator
         shell: bash
-        run: |
-          set -euo pipefail
-          az extension add --name ml --upgrade --yes
-
-      - name: Start model flow through Azure Function
-        if: inputs.orchestration_target == 'function'
-        shell: bash
-        run: |
-          set -euo pipefail
-          run_id="$(date -u +%Y%m%dT%H%M%SZ)-${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}"
-          echo "Azure orchestrator: Function App ${AZURE_FUNCTION_APP}"
-          echo "Azure compute: Azure Machine Learning workspace ${AZURE_ML_WORKSPACE}"
-          echo "Remote input: ${MLOPS_CONTAINER_RAW_MASKED}/${{ inputs.input_blob_path }}"
-          echo "Run id: ${run_id}"
-          echo "RUN_ID=${run_id}" >> "${GITHUB_ENV}"
-          export RUN_ID_VALUE="${run_id}"
-          function_key="$(az functionapp function keys list \
-            --resource-group "${AZURE_RESOURCE_GROUP}" \
-            --name "${AZURE_FUNCTION_APP}" \
-            --function-name model-flow \
-            --query default -o tsv)"
-          response="$(mktemp)"
-          payload="$(mktemp)"
-          python -c 'import json,os,sys; json.dump({"environment": os.environ["MLOPS_ENVIRONMENT"], "run_owner": os.environ["MLOPS_RUN_OWNER"], "input_blob_path": os.environ["INPUT_BLOB_PATH"], "mlops_run_id": os.environ["RUN_ID_VALUE"]}, open(sys.argv[1], "w"))' "${payload}"
-          http_code="$(curl -sS -o "${response}" -w "%{http_code}" \
-            -X POST "https://${AZURE_FUNCTION_APP}.azurewebsites.net/api/model-flow" \
-            -H "Content-Type: application/json" \
-            -H "x-functions-key: ${function_key}" \
-            --data @"${payload}")"
-          cat "${response}"
-          if [[ "${http_code}" != "202" ]]; then
-            echo "Function orchestration failed with HTTP ${http_code}" >&2
-            exit 1
-          fi
-          job_name="$(python -c 'import json,sys; print(json.load(open(sys.argv[1]))["azure_ml_job_name"])' "${response}")"
-          echo "Azure ML job: ${job_name}"
-          echo "AZURE_ML_JOB_NAME=${job_name}" >> "${GITHUB_ENV}"
-
-      - name: Submit Azure ML model job directly emergency fallback
-        if: inputs.orchestration_target == 'direct-aml'
-        shell: bash
-        run: |
-          set -euo pipefail
-          run_id="$(date -u +%Y%m%dT%H%M%SZ)-${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}"
-          echo "Azure compute: Azure Machine Learning workspace ${AZURE_ML_WORKSPACE}"
-          echo "Remote input: ${MLOPS_CONTAINER_RAW_MASKED}/${{ inputs.input_blob_path }}"
-          echo "Run id: ${run_id}"
-          echo "RUN_ID=${run_id}" >> "${GITHUB_ENV}"
-          job_name="$(az ml job create \
-            --resource-group "${AZURE_RESOURCE_GROUP}" \
-            --workspace-name "${AZURE_ML_WORKSPACE}" \
-            --file azureml/pricing-mlops-job.yml \
-            --set inputs.storage_account="${AZURE_STORAGE_ACCOUNT}" \
-                  inputs.environment="${MLOPS_ENVIRONMENT}" \
-                  inputs.run_owner="${MLOPS_RUN_OWNER}" \
-                  inputs.run_id="${run_id}" \
-                  inputs.input_blob_path="${{ inputs.input_blob_path }}" \
-            --query name -o tsv)"
-          echo "Azure ML job: ${job_name}"
-          echo "AZURE_ML_JOB_NAME=${job_name}" >> "${GITHUB_ENV}"
-
-      - name: Wait for Azure ML model job
-        shell: bash
-        run: |
-          set -euo pipefail
-          for attempt in {1..80}; do
-            status="$(az ml job show \
-              --name "${AZURE_ML_JOB_NAME}" \
-              --resource-group "${AZURE_RESOURCE_GROUP}" \
-              --workspace-name "${AZURE_ML_WORKSPACE}" \
-              --query status -o tsv)"
-            echo "Azure ML job status: ${status:-unknown}"
-            if [[ "${status}" == "Completed" ]]; then
-              exit 0
-            fi
-            if [[ "${status}" == "Failed" || "${status}" == "Canceled" || "${status}" == "CancelRequested" || "${status}" == "NotResponding" ]]; then
-              az ml job show \
-                --name "${AZURE_ML_JOB_NAME}" \
-                --resource-group "${AZURE_RESOURCE_GROUP}" \
-                --workspace-name "${AZURE_ML_WORKSPACE}" \
-                --query "{name:name,status:status,services:services}" -o json
-              exit 1
-            fi
-            sleep 15
-          done
-          echo "Timed out waiting for Azure ML job execution." >&2
-          exit 1
-
-      - name: Verify Storage outputs
-        shell: bash
-        run: |
-          set -euo pipefail
-          run_date="${RUN_ID:0:8}"
-          prefix="environment=${MLOPS_ENVIRONMENT}/compute=${MLOPS_COMPUTE_TARGET}/owner=${MLOPS_RUN_OWNER}/run_date=${run_date}/run_id=${RUN_ID}"
-          outputs=(
-            "${MLOPS_CONTAINER_RUNS}:${prefix}/model_run_log.json"
-            "${MLOPS_CONTAINER_SNAPSHOTS}:${prefix}/model_output_snapshot.csv"
-            "${MLOPS_CONTAINER_DRIFT_LOGS}:${prefix}/model_drift_log.json"
-            "${MLOPS_CONTAINER_REPORTS}:${prefix}/report.md"
-            "${MLOPS_CONTAINER_ARTIFACTS}:${prefix}/curated_pricing.csv"
-            "${MLOPS_CONTAINER_CURATED}:${prefix}/curated_pricing.csv"
-          )
-          for item in "${outputs[@]}"; do
-            container="${item%%:*}"
-            blob="${item#*:}"
-            exists="$(az storage blob exists \
-              --account-name "${AZURE_STORAGE_ACCOUNT}" \
-              --container-name "${container}" \
-              --name "${blob}" \
-              --auth-mode login \
-              --query exists -o tsv)"
-            echo "output check: container=${container} blob_path=${blob} exists=${exists}"
-            if [[ "${exists}" != "true" ]]; then
-              exit 1
-            fi
-          done
+        run: scripts/run_model_flow_function.sh "${{ inputs.environment }}" "${{ inputs.run_owner }}" "${{ inputs.input_blob_path }}"
