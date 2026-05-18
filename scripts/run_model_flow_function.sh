@@ -138,10 +138,18 @@ echo "Azure ML job: ${AZURE_ML_JOB_NAME}"
 echo "Expected output prefix: ${EXPECTED_OUTPUT_PREFIX}"
 
 for attempt in {1..80}; do
-  JOB_STATUS="$(az rest \
-    --method get \
-    --url "https://management.azure.com/subscriptions/${SUBSCRIPTION_ID}/resourceGroups/${RESOURCE_GROUP}/providers/Microsoft.MachineLearningServices/workspaces/${AZURE_ML_WORKSPACE}/jobs/${AZURE_ML_JOB_NAME}?api-version=2024-04-01" \
-    --query properties.status -o tsv)"
+  if ! JOB_STATUS="$(az rest \
+      --method get \
+      --url "https://management.azure.com/subscriptions/${SUBSCRIPTION_ID}/resourceGroups/${RESOURCE_GROUP}/providers/Microsoft.MachineLearningServices/workspaces/${AZURE_ML_WORKSPACE}/jobs/${AZURE_ML_JOB_NAME}?api-version=2024-04-01" \
+      --query properties.status -o tsv 2>/dev/null)"; then
+    echo "Azure ML job status: unavailable from ARM, retrying"
+    if [[ "${attempt}" == "80" ]]; then
+      echo "Timed out waiting for Azure ML job status." >&2
+      exit 1
+    fi
+    sleep 15
+    continue
+  fi
   echo "Azure ML job status: ${JOB_STATUS:-unknown}"
   if [[ "${JOB_STATUS}" == "Completed" ]]; then
     break
