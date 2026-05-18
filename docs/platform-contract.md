@@ -45,7 +45,7 @@ Cada corrida local o corrida Azure produce un `run_id` y artefactos mínimos:
 
 En local se escriben bajo `runs/local/<run_id>/`. En Azure, Azure ML escribe esos artefactos a los contenedores `curated`, `runs`, `snapshots`, `drift-logs`, `reports` y `artifacts`.
 
-El pipeline Azure minimo operativo usa Azure Functions como orquestador. La Function valida el request, somete un Azure ML command job y devuelve `azure_ml_job_name`, `run_id` y el prefijo esperado de outputs. GitHub Actions puede publicar la Function o llamar el endpoint para pruebas controladas, pero no es requerido para operar el flujo. El fallback `direct-aml` usa el output `modelGithubActionsClientId` de `pricing-mlops-platform` como `AZURE_CLIENT_ID` del runner de GitHub y solo debe usarse si la Function esta bloqueada. No requiere `Owner`, `Contributor` de subscription ni acceso a `raw-unmasked`.
+El pipeline Azure minimo operativo usa Azure Functions como orquestador. La Function valida el request, somete un Azure ML command job y devuelve `azure_ml_job_name`, `run_id`, `correlation_id` y el prefijo esperado de outputs. GitHub Actions puede publicar la Function o llamar el endpoint para pruebas controladas, pero no es requerido para operar el flujo. El fallback `direct-aml` usa el output `modelGithubActionsClientId` de `pricing-mlops-platform` como `AZURE_CLIENT_ID` del runner de GitHub y solo debe usarse si la Function esta bloqueada. No requiere `Owner`, `Contributor` de subscription ni acceso a `raw-unmasked`.
 
 ## Layout de subida PoC
 
@@ -75,6 +75,6 @@ curated/environment=<env>/compute=<target>/owner=<owner>/run_date=<yyyymmdd>/run
 
 `pricing-mlops` no crea ni modifica infraestructura. La integracion real con Storage/ADLS debe usar identidades y permisos publicados por `pricing-mlops-platform`.
 
-GitHub Actions no es compute ML ni orquestador operativo principal. La operacion normal es llamar `POST /api/model-flow` en Azure Functions; Azure ML ejecuta validacion, curated, scoring, drift y escritura de artefactos. En `workflow_dispatch`, GitHub Actions puede llamar la Function para pruebas controladas o usar `direct-aml` como fallback de emergencia.
+GitHub Actions no es compute ML ni orquestador operativo principal. La operacion normal es llamar `POST /api/model-flow` en Azure Functions con `scripts/run_model_flow_function.sh`; Azure ML ejecuta validacion, curated, scoring, drift y escritura de artefactos. En `workflow_dispatch`, GitHub Actions puede llamar la Function para pruebas controladas o usar `direct-aml` como fallback de emergencia. La Function key es temporal; la siguiente iteracion debe evaluar Entra ID/Easy Auth o API Management.
 
 Los sandboxes personales como `sandbox-local` se usan solo desde local/admin y no son ambientes soportados por el workflow manual.

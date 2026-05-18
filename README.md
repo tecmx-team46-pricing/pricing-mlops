@@ -99,6 +99,27 @@ artifacts/environment=<env>/compute=<target>/owner=<owner>/run_date=<yyyymmdd>/r
 
 Ver [`docs/compute-target-contract.md`](docs/compute-target-contract.md) para el contrato de Azure ML y el rol de Azure Functions como orquestador.
 
+## Operacion sin GitHub Actions
+
+La forma operativa recomendada para disparar el flujo es llamar la Azure Function desde el script local:
+
+```bash
+AZURE_FUNCTION_APP=func-pricing-mlops-staging-<suffix> \
+AZURE_RESOURCE_GROUP=rg-pricing-mlops-staging \
+AZURE_ML_WORKSPACE=mlw-pricing-mlops-staging-<suffix> \
+scripts/run_model_flow_function.sh staging team46 samples/sample_pricing_v1.csv
+```
+
+El script:
+
+- obtiene la Function key sin imprimirla;
+- llama `POST /api/model-flow`;
+- espera el job AML con ARM/REST, sin depender de `az ml`;
+- verifica metadata de los seis outputs en Storage;
+- falla si aparece `raw-unmasked` en `staging`.
+
+Ver [`docs/runbook.md`](docs/runbook.md) para diagnostico operativo.
+
 ## Que no hace este repo
 
 - No crea Resource Groups, Storage Accounts, Key Vault, redes ni role assignments.

@@ -89,8 +89,11 @@ El bloqueo inicial `KeyBasedAuthenticationNotPermitted` se resolvio desde `prici
 
 - `GET /api/health` devuelve estado basico.
 - `POST /api/model-flow` valida `environment`, `run_owner` e `input_blob_path`, genera o acepta `run_id`, somete el job AML y devuelve `azure_ml_job_name` con el prefijo esperado de outputs.
+- limita el payload JSON;
+- devuelve `correlation_id` para diagnostico;
+- sanitiza errores 500 para no exponer stack traces ni detalles internos.
 
-No debe contener logica de pricing propia. En `staging`, la Function se despliega en `centralus` y orquesta Azure ML contra Storage/AML en `eastus2`. Si App Service/Functions no tiene quota disponible, el orquestador queda bloqueado por plataforma y GitHub Actions puede someter AML directamente como emergencia sin ejecutar ML.
+No debe contener logica de pricing propia. En `staging`, la Function se despliega en `centralus` y orquesta Azure ML contra Storage/AML en `eastus2`. El endpoint usa Function key como control temporal; Entra ID/Easy Auth o API Management quedan como siguiente iteracion de seguridad. Si App Service/Functions no tiene quota disponible, el orquestador queda bloqueado por plataforma y GitHub Actions puede someter AML directamente como emergencia sin ejecutar ML.
 
 ## Container Apps Job Legacy
 

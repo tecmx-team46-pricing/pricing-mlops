@@ -1,8 +1,10 @@
 from __future__ import annotations
 
 import json
+import logging
 import os
 import re
+import uuid
 from datetime import datetime, timezone
 from pathlib import Path
 
@@ -13,6 +15,7 @@ app = func.FunctionApp(http_auth_level=func.AuthLevel.FUNCTION)
 ALLOWED_ENVIRONMENTS = {"staging", "validation"}
 SAFE_OWNER_RE = re.compile(r"^[A-Za-z0-9][A-Za-z0-9_-]{0,63}$")
 SAFE_BLOB_RE = re.compile(r"^[A-Za-z0-9][A-Za-z0-9_./=-]{0,255}$")
+MAX_PAYLOAD_BYTES = 4096
 REPO_ROOT = Path(__file__).resolve().parent
 JOB_FILE = REPO_ROOT / "azureml" / "pricing-mlops-job.yml"
 
@@ -20,6 +23,13 @@ JOB_FILE = REPO_ROOT / "azureml" / "pricing-mlops-job.yml"
 @app.function_name(name="model-flow")
 @app.route(route="model-flow", methods=["POST"])
 def model_flow(req: func.HttpRequest) -> func.HttpResponse:
+    correlation_id = _correlation_id(req)
+    if len(req.get_body() or b"") > MAX_PAYLOAD_BYTES:
+        return _json_response(
+            {"accepted": False, "error": "payload too large", "correlation_id": correlation_id},
+            413,
+        )
+
     try:
         payload = req.get_json()
     except ValueError:
@@ -28,36 +38,32 @@ def model_flow(req: func.HttpRequest) -> func.HttpResponse:
     try:
         request = _orchestration_request(payload)
     except ValueError as exc:
-        return func.HttpResponse(
-            json.dumps({"status": "failed", "error": str(exc)}),
-            status_code=400,
-            mimetype="application/json",
+        return _json_response(
+            {"accepted": False, "error": str(exc), "correlation_id": correlation_id},
+            400,
         )
 
     try:
         result = submit_azure_ml_job(request)
     except Exception as exc:
-        return func.HttpResponse(
-            json.dumps({"accepted": False, "error": str(exc)}, sort_keys=True),
-            status_code=500,
-            mimetype="application/json",
+        logging.exception("AML job submission failed correlation_id=%s", correlation_id)
+        return _json_response(
+            {
+                "accepted": False,
+                "error": "failed to submit Azure ML job",
+                "correlation_id": correlation_id,
+            },
+            500,
         )
 
-    return func.HttpResponse(
-        json.dumps(result, sort_keys=True),
-        status_code=202,
-        mimetype="application/json",
-    )
+    result["correlation_id"] = correlation_id
+    return _json_response(result, 202)
 
 
 @app.function_name(name="health")
 @app.route(route="health", methods=["GET"])
 def health(req: func.HttpRequest) -> func.HttpResponse:
-    return func.HttpResponse(
-        json.dumps({"status": "ok", "role": "azure-ml-orchestrator"}),
-        status_code=200,
-        mimetype="application/json",
-    )
+    return _json_response({"status": "ok", "role": "azure-ml-orchestrator"}, 200)
 
 
 def _orchestration_request(payload: dict[str, object]) -> dict[str, str]:
@@ -110,6 +116,8 @@ def _validate_request(request: dict[str, str]) -> None:
         raise ValueError("input_blob_path must be a relative blob path")
     if not SAFE_BLOB_RE.fullmatch(input_blob_path):
         raise ValueError("input_blob_path contains unsupported characters")
+    if len(input_blob_path) > 255:
+        raise ValueError("input_blob_path is too long")
 
 
 def _new_run_id() -> str:
@@ -124,6 +132,21 @@ def _expected_output_prefix(request: dict[str, str]) -> str:
         f"owner={request['run_owner']}/"
         f"run_date={run_date}/"
         f"run_id={request['run_id']}"
+    )
+
+
+def _correlation_id(req: func.HttpRequest) -> str:
+    header_value = req.headers.get("x-correlation-id") if req.headers else None
+    if header_value and SAFE_BLOB_RE.fullmatch(header_value[:64]):
+        return header_value[:64]
+    return str(uuid.uuid4())
+
+
+def _json_response(body: dict[str, object], status_code: int) -> func.HttpResponse:
+    return func.HttpResponse(
+        json.dumps(body, sort_keys=True),
+        status_code=status_code,
+        mimetype="application/json",
     )
 
 

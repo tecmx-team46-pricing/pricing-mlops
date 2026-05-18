@@ -13,8 +13,9 @@ if [[ "${ENVIRONMENT}" != "staging" && "${ENVIRONMENT}" != "validation" ]]; then
 fi
 
 if [[ -z "${FUNCTION_APP}" ]]; then
-  FUNCTION_APP="$(az functionapp list \
+  FUNCTION_APP="$(az resource list \
     --resource-group "${RESOURCE_GROUP}" \
+    --resource-type Microsoft.Web/sites \
     --query "[?contains(name, 'func-pricing-mlops')].name | [0]" -o tsv)"
 fi
 

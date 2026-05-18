@@ -76,6 +76,7 @@ def test_model_flow_submits_aml_job(monkeypatch):
     assert response.status_code == 202
     assert body["accepted"] is True
     assert body["azure_ml_job_name"] == "test_job"
+    assert body["correlation_id"]
     assert submitted["run_id"] == "20260517T000000Z-function"
 
 
@@ -108,6 +109,51 @@ def test_model_flow_rejects_unsafe_owner(monkeypatch):
 
     assert response.status_code == 400
     assert b"run_owner" in response.get_body()
+
+
+def test_model_flow_rejects_large_payload(monkeypatch):
+    _set_required_env(monkeypatch)
+    request = func.HttpRequest(
+        method="POST",
+        url="/api/model-flow",
+        body=b"{" + b'"x":' + b'"a"' * 5000 + b"}",
+        headers={"content-type": "application/json"},
+    )
+
+    response = function_app.model_flow(request)
+    body = json.loads(response.get_body())
+
+    assert response.status_code == 413
+    assert body["error"] == "payload too large"
+    assert body["correlation_id"]
+
+
+def test_model_flow_sanitizes_submit_errors(monkeypatch):
+    _set_required_env(monkeypatch)
+
+    def fail_submit(_request):
+        raise RuntimeError("secret internal SDK path")
+
+    monkeypatch.setattr(function_app, "submit_azure_ml_job", fail_submit)
+    request = func.HttpRequest(
+        method="POST",
+        url="/api/model-flow",
+        body=json.dumps(
+            {
+                "environment": "staging",
+                "run_owner": "team46",
+                "input_blob_path": "samples/sample_pricing_v1.csv",
+            }
+        ).encode(),
+        headers={"content-type": "application/json"},
+    )
+
+    response = function_app.model_flow(request)
+    body = json.loads(response.get_body())
+
+    assert response.status_code == 500
+    assert body["error"] == "failed to submit Azure ML job"
+    assert "secret" not in response.get_body().decode()
 
 
 def _set_required_env(monkeypatch):
