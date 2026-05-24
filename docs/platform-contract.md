@@ -39,6 +39,8 @@ MLOPS_CONTAINER_ARTIFACTS
 
 GitHub Actions tambien requiere `AZURE_CLIENT_ID` para OIDC. La operacion local usa el usuario autenticado con `az login`.
 
+`AZURE_STORAGE_ACCOUNT` es el Storage MLOps funcional. No apunta al Storage runtime interno de Azure ML ni al Storage host de Azure Functions.
+
 ## Entrada
 
 El input remoto minimo es:
@@ -66,6 +68,8 @@ Layout Azure:
 ```text
 <container>/environment=<env>/compute=azure-ml/owner=<owner>/run_date=<yyyymmdd>/run_id=<run_id>/<artifact>
 ```
+
+Azure ML genera artifacts internos como snapshots de codigo, environments, logs y job artifacts runtime. Esos blobs no son outputs funcionales del modelo y pueden vivir en un Storage runtime separado administrado por plataforma.
 
 ## Seguridad
 

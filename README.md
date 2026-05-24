@@ -113,10 +113,13 @@ Artefactos:
 | `artifacts` | `curated_pricing.csv` |
 | `curated` | `curated_pricing.csv` |
 
+Estos outputs funcionales se escriben solo en el Storage MLOps publicado por plataforma (`AZURE_STORAGE_ACCOUNT`, hoy `<mlops-storage-account>` en `staging`). Azure ML puede crear snapshots de codigo, logs, environments y artifacts runtime en su storage interno; este repo no los interpreta como outputs del modelo.
+
 ## Documentacion
 
 - [`docs/runbook.md`](docs/runbook.md)
 - [`docs/platform-contract.md`](docs/platform-contract.md)
+- [`docs/compute-target-contract.md`](docs/compute-target-contract.md)
 - [`docs/data-governance.md`](docs/data-governance.md)
 
 ## Limites
