@@ -42,7 +42,7 @@ jobs:
         run: python -m pip install -e ".[dev]"
 
       - name: Compile Python files
-        run: python -m compileall src scripts tests function_app.py
+        run: python -m compileall src scripts tests
 
       - name: Run tests
         run: python -m pytest
@@ -76,6 +76,11 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      - uses: actions/checkout@v4
+        with:
+          repository: tecmx-team46-pricing/pricing-mlops-platform
+          path: pricing-mlops-platform
+
       - uses: azure/login@v2
         with:
           client-id: ${{ vars.AZURE_CLIENT_ID }}
@@ -108,4 +113,6 @@ jobs:
 
       - name: Call Azure Function orchestrator
         shell: bash
+        env:
+          PRICING_MLOPS_PLATFORM_REPO: ${{ github.workspace }}/pricing-mlops-platform
         run: scripts/run_model_flow_function.sh "${{ inputs.environment }}" "${{ inputs.run_owner }}" "${{ inputs.input_blob_path }}"

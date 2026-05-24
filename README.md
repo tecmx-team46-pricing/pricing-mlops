@@ -1,8 +1,8 @@
 # pricing-mlops
 
-Repositorio funcional del flujo Pricing MLOps. Contiene validacion de datos, curated/features, scoring controlado, drift basico, Azure Function orchestrator, scripts operativos y tests.
+Repositorio funcional/data science del flujo Pricing MLOps, organizado para mantenerse alineado con Cookiecutter Data Science. Contiene validacion de datos, curated/features, scoring controlado, drift basico, scripts del flujo ML y tests.
 
-Este repo no crea infraestructura Azure. Consume la plataforma definida en `pricing-mlops-platform`.
+Este repo no crea infraestructura Azure ni contiene el runtime de Azure Functions/Azure ML. Consume la plataforma definida en `pricing-mlops-platform`, que ahora es dueña de la orquestacion MLOps bajo `mlops/`.
 
 El flujo actual se identifica como `pricing-baseline-flow`. Es un baseline operativo controlado para validar contrato, orquestacion, trazabilidad y storage layout; no es el modelo productivo definitivo.
 
@@ -12,6 +12,7 @@ El flujo actual se identifica como `pricing-baseline-flow`. Es un baseline opera
 raw-masked/samples/sample_pricing_v1.csv
 -> Azure Function /api/model-flow
 -> Azure ML command job
+-> snapshot de este repo
 -> validacion / curated / scoring / drift / report
 -> Storage outputs versionados
 ```
@@ -29,7 +30,7 @@ python -m pip install -e ".[dev]"
 ## Validacion Local
 
 ```bash
-python -m compileall src scripts tests function_app.py
+python -m compileall src scripts tests
 python -m pytest
 python scripts/validate_inputs.py --input data/samples/masked/sample_pricing.csv
 python scripts/run_local_flow.py --input data/samples/masked/sample_pricing.csv --output runs/local
@@ -51,10 +52,15 @@ El flow local escribe en `runs/local/<run_id>/`:
 az login
 az account set --subscription "<azure-subscription-name>"
 
+cd ../pricing-mlops-platform
+
+PRICING_MLOPS_REPO=../pricing-mlops \
+mlops/scripts/publish_orchestrator_function.sh staging
+
 AZURE_FUNCTION_APP=func-pricing-mlops-staging-<suffix> \
 AZURE_RESOURCE_GROUP=rg-pricing-mlops-staging \
 AZURE_ML_WORKSPACE=mlw-pricing-mlops-stg-v2-<suffix> \
-scripts/run_model_flow_function.sh staging team46 samples/sample_pricing_v1.csv
+mlops/scripts/run_model_flow_function.sh staging team46 samples/sample_pricing_v1.csv
 ```
 
 El script:
@@ -73,7 +79,7 @@ El script:
 |---|---|---|
 | `pull_request` | Compile, tests, validacion sample y flow local. | No |
 | `workflow_dispatch`, `run_azure_flow=false` | Misma validacion local. | No |
-| `workflow_dispatch`, `run_azure_flow=true` | Llama la Azure Function mediante `scripts/run_model_flow_function.sh`. | Si |
+| `workflow_dispatch`, `run_azure_flow=true` | Usa wrapper de compatibilidad; la operacion principal vive en `pricing-mlops-platform/mlops/scripts/run_model_flow_function.sh`. | Si |
 
 Ambientes permitidos: `staging`, `validation`. No se aceptan sandboxes ni prod.
 
@@ -129,5 +135,6 @@ Estos outputs funcionales se escriben solo en el Storage MLOps publicado por pla
 - No datos reales ni unmasked en Git.
 - No account keys ni connection strings.
 - No infraestructura desde este repo.
+- No runtime Azure Functions ni YAML de command job AML en este repo; viven en `pricing-mlops-platform/mlops/`.
 - No Container Apps/Docker como ruta activa.
 - No scoring/drift pesado dentro de Azure Function.

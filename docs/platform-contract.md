@@ -2,18 +2,19 @@
 
 ## Responsabilidades
 
-`pricing-mlops` implementa el flujo funcional. `pricing-mlops-platform` crea y gobierna Azure.
+`pricing-mlops` implementa el flujo funcional/data science. `pricing-mlops-platform` crea y gobierna Azure, y tambien contiene el runtime MLOps de orquestacion bajo `mlops/`.
 
-Este repo no crea Resource Groups, Storage Accounts, RBAC, Key Vault, Azure ML Workspace ni Function App.
+Este repo no crea Resource Groups, Storage Accounts, RBAC, Key Vault, Azure ML Workspace ni Function App. Tampoco contiene `function_app.py`, `host.json` ni el YAML del command job AML.
 
 ## Runtime
 
 Ruta operativa:
 
 ```text
-scripts/run_model_flow_function.sh
+pricing-mlops-platform/mlops/scripts/run_model_flow_function.sh
 -> Azure Function /api/model-flow
 -> Azure ML command job
+-> snapshot de este repo
 -> Storage outputs
 ```
 

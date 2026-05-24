@@ -6,10 +6,12 @@
 az login
 az account set --subscription "<azure-subscription-name>"
 
+cd ../pricing-mlops-platform
+
 AZURE_FUNCTION_APP=func-pricing-mlops-staging-<suffix> \
 AZURE_RESOURCE_GROUP=rg-pricing-mlops-staging \
 AZURE_ML_WORKSPACE=mlw-pricing-mlops-stg-v2-<suffix> \
-scripts/run_model_flow_function.sh staging team46 samples/sample_pricing_v1.csv
+mlops/scripts/run_model_flow_function.sh staging team46 samples/sample_pricing_v1.csv
 ```
 
 ## Que Hace El Script

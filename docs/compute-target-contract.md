@@ -8,7 +8,7 @@ La ruta remota activa es:
 Azure Function -> Azure ML command job -> Storage MLOps outputs
 ```
 
-El job usa `azureml/pricing-mlops-job.yml` y ejecuta `scripts/run_azure_ml_flow.py`. La Function inyecta estos inputs:
+El job se define en `pricing-mlops-platform/mlops/azureml/pricing-mlops-job.yml`. La plataforma empaqueta un snapshot de este repo como `pricing-mlops-source/`, y Azure ML ejecuta `scripts/run_azure_ml_flow.py` desde ese snapshot. La Function inyecta estos inputs:
 
 ```text
 storage_account
