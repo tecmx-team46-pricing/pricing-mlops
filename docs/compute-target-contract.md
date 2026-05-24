@@ -8,7 +8,19 @@ La ruta remota activa es:
 Azure Function -> Azure ML pipeline/job -> Storage MLOps outputs
 ```
 
-El pipeline se define en `pricing-mlops-platform/mlops/azureml/pricing-mlops-pipeline.yml`, con `pricing-mlops-job.yml` como fallback. La plataforma empaqueta un snapshot de este repo como `pricing-mlops-source/`, y Azure ML ejecuta `scripts/run_azure_ml_flow.py` desde ese snapshot. La Function inyecta estos inputs:
+El pipeline se define en `pricing-mlops-platform/mlops/azureml/pricing-mlops-pipeline.yml`, con `pricing-mlops-job.yml` como fallback. La plataforma empaqueta un snapshot de este repo como `pricing-mlops-source/`.
+
+El pipeline visible tiene tres componentes:
+
+| Componente | Entrypoint | Salida principal |
+|---|---|---|
+| `validate_prepare` | `scripts/components/validate_prepare.py` | `curated_input.csv`, `validation_metadata.json` |
+| `score_evaluate` | `scripts/components/score_evaluate.py` | `model_run_log.json`, snapshot, drift log, report, curated final |
+| `publish_outputs` | `scripts/components/publish_outputs.py` | Blobs finales en Storage MLOps |
+
+El fallback de un solo command job sigue ejecutando `scripts/run_azure_ml_flow.py`.
+
+La Function inyecta estos inputs:
 
 ```text
 storage_account

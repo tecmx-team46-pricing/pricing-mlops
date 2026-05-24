@@ -4,7 +4,7 @@
 
 `pricing-mlops` implementa el flujo funcional/data science. `pricing-mlops-platform` crea y gobierna Azure, y tambien contiene el runtime MLOps de orquestacion bajo `mlops/`.
 
-Este repo no crea Resource Groups, Storage Accounts, RBAC, Key Vault, Azure ML Workspace ni Function App. Tampoco contiene `function_app.py`, `host.json` ni el YAML del command job AML.
+Este repo no crea Resource Groups, Storage Accounts, RBAC, Key Vault, Azure ML Workspace ni Function App. Tampoco contiene `function_app.py`, `host.json` ni el YAML del pipeline/job AML.
 
 ## Runtime
 
@@ -13,12 +13,18 @@ Ruta operativa:
 ```text
 pricing-mlops-platform/mlops/scripts/run_model_flow_function.sh
 -> Azure Function /api/model-flow
--> Azure ML command job
+-> Azure ML pipeline de 3 componentes
 -> snapshot de este repo
 -> Storage outputs
 ```
 
 La Function solo orquesta. Azure ML ejecuta validacion, curated/features, scoring, drift y reportes.
+
+Los entrypoints de componentes viven en `scripts/components/`:
+
+- `validate_prepare.py`
+- `score_evaluate.py`
+- `publish_outputs.py`
 
 El flujo funcional se identifica como `pricing-baseline-flow`. Mantiene un scoring controlado para probar el contrato end-to-end y queda preparado para reemplazarse por un modelo real o baseline formal aprobado.
 
@@ -71,7 +77,7 @@ Cada corrida produce:
 Layout Azure:
 
 ```text
-<container>/environment=<env>/compute=azure-ml/owner=<owner>/run_date=<yyyymmdd>/run_id=<run_id>/<artifact>
+<container>/environment=<env>/compute=azure-ml/trigger=<manual|event-grid>/owner=<owner>/run_date=<yyyymmdd>/run_id=<run_id>/<artifact>
 ```
 
 Azure ML genera artifacts internos como snapshots de codigo, environments, logs y job artifacts runtime. Esos blobs no son outputs funcionales del modelo y viven en el Storage runtime administrado por plataforma para el workspace activo.

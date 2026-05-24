@@ -11,11 +11,19 @@ El flujo actual se identifica como `pricing-baseline-flow`. Es un baseline opera
 ```text
 raw-masked/samples/sample_pricing_v1.csv
 -> Azure Function /api/model-flow
--> Azure ML pipeline/job
+-> Azure ML pipeline de 3 componentes
 -> snapshot de este repo
 -> validacion / curated / scoring / drift / report
 -> Storage outputs versionados
 ```
+
+Componentes expuestos para Azure ML:
+
+| Componente | Entrypoint | Responsabilidad |
+|---|---|---|
+| `validate_prepare` | `scripts/components/validate_prepare.py` | Descarga el CSV masked, valida y genera curated intermedio. |
+| `score_evaluate` | `scripts/components/score_evaluate.py` | Scorea, evalua drift y genera artefactos locales. |
+| `publish_outputs` | `scripts/components/publish_outputs.py` | Publica los seis outputs funcionales al Storage MLOps. |
 
 El flujo automatico lo dispara plataforma con Event Grid sobre `raw-masked/incoming/*.csv`. Este repo no contiene Event Grid, Function App ni IaC.
 
@@ -137,7 +145,7 @@ Estos outputs funcionales se escriben solo en el Storage MLOps publicado por pla
 - No datos reales ni unmasked en Git.
 - No account keys ni connection strings.
 - No infraestructura desde este repo.
-- No runtime Azure Functions ni YAML de command job AML en este repo; viven en `pricing-mlops-platform/mlops/`.
+- No runtime Azure Functions ni YAML de pipeline/job AML en este repo; viven en `pricing-mlops-platform/mlops/`.
 - No scripts de publicacion u operacion de Azure Function en este repo; usar `pricing-mlops-platform/mlops/scripts/`.
 - No Container Apps/Docker como ruta activa.
 - No scoring/drift pesado dentro de Azure Function.
