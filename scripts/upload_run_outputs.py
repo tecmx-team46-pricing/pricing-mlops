@@ -116,6 +116,7 @@ def build_upload_plan(
     environment: str,
     run_owner: str = "team46",
     compute_target: str | None = None,
+    trigger_type: str | None = None,
     containers: dict[str, str] | None = None,
 ) -> dict[str, UploadTarget]:
     resolved_run_dir = Path(run_dir)
@@ -135,6 +136,8 @@ def build_upload_plan(
     prefix_parts = [f"environment={environment}"]
     if compute_target:
         prefix_parts.append(f"compute={compute_target}")
+    if trigger_type:
+        prefix_parts.append(f"trigger={trigger_type}")
     prefix_parts.extend(
         [
             f"owner={run_owner}",

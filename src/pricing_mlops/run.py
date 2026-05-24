@@ -27,6 +27,7 @@ def run_local_flow(
     input_path: str | Path,
     output_root: str | Path,
     run_id: str | None = None,
+    run_metadata: dict[str, str] | None = None,
 ) -> LocalFlowResult:
     started_at = datetime.now(timezone.utc)
     source_path = Path(input_path)
@@ -75,6 +76,8 @@ def run_local_flow(
             "report": report_path.name,
         },
     }
+    if run_metadata:
+        run_log.update(run_metadata)
     run_log_path.write_text(json.dumps(run_log, indent=2, sort_keys=True) + "\n")
     report_path.write_text(_render_report(run_log, drift))
 

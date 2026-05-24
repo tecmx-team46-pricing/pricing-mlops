@@ -11,11 +11,13 @@ El flujo actual se identifica como `pricing-baseline-flow`. Es un baseline opera
 ```text
 raw-masked/samples/sample_pricing_v1.csv
 -> Azure Function /api/model-flow
--> Azure ML command job
+-> Azure ML pipeline/job
 -> snapshot de este repo
 -> validacion / curated / scoring / drift / report
 -> Storage outputs versionados
 ```
+
+El flujo automatico lo dispara plataforma con Event Grid sobre `raw-masked/incoming/*.csv`. Este repo no contiene Event Grid, Function App ni IaC.
 
 GitHub Actions no es requerido para operar el flujo. Solo se usa para CI y pruebas controladas.
 
@@ -54,7 +56,7 @@ az account set --subscription "<azure-subscription-name>"
 
 cd ../pricing-mlops-platform
 
-PRICING_MLOPS_REPO=../pricing-mlops \
+MODEL_REPO_PATH=../pricing-mlops \
 mlops/scripts/publish_orchestrator_function.sh staging
 
 AZURE_FUNCTION_APP=func-pricing-mlops-staging-<suffix> \
@@ -107,7 +109,7 @@ MLOPS_CONTAINER_ARTIFACTS=artifacts
 ## Outputs
 
 ```text
-<container>/environment=<env>/compute=azure-ml/owner=<owner>/run_date=<yyyymmdd>/run_id=<run_id>/<artifact>
+<container>/environment=<env>/compute=azure-ml/trigger=<manual|event-grid>/owner=<owner>/run_date=<yyyymmdd>/run_id=<run_id>/<artifact>
 ```
 
 Artefactos:

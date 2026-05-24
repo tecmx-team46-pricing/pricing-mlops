@@ -5,10 +5,10 @@
 La ruta remota activa es:
 
 ```text
-Azure Function -> Azure ML command job -> Storage MLOps outputs
+Azure Function -> Azure ML pipeline/job -> Storage MLOps outputs
 ```
 
-El job se define en `pricing-mlops-platform/mlops/azureml/pricing-mlops-job.yml`. La plataforma empaqueta un snapshot de este repo como `pricing-mlops-source/`, y Azure ML ejecuta `scripts/run_azure_ml_flow.py` desde ese snapshot. La Function inyecta estos inputs:
+El pipeline se define en `pricing-mlops-platform/mlops/azureml/pricing-mlops-pipeline.yml`, con `pricing-mlops-job.yml` como fallback. La plataforma empaqueta un snapshot de este repo como `pricing-mlops-source/`, y Azure ML ejecuta `scripts/run_azure_ml_flow.py` desde ese snapshot. La Function inyecta estos inputs:
 
 ```text
 storage_account
@@ -16,6 +16,10 @@ environment
 run_owner
 run_id
 input_blob_path
+trigger_type
+model_repo
+model_ref
+model_commit_sha
 ```
 
 `storage_account` debe ser el Storage MLOps funcional publicado por plataforma. En `staging` es `<mlops-storage-account>`.
@@ -46,7 +50,7 @@ artifacts
 Cada ruta usa:
 
 ```text
-environment=<env>/compute=azure-ml/owner=<owner>/run_date=<yyyymmdd>/run_id=<run_id>/
+environment=<env>/compute=azure-ml/trigger=<manual|event-grid>/owner=<owner>/run_date=<yyyymmdd>/run_id=<run_id>/
 ```
 
 ## Artifacts Internos Azure ML

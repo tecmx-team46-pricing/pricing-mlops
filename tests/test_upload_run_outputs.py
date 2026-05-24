@@ -94,3 +94,28 @@ def test_build_upload_plan_can_partition_by_compute_target(tmp_path):
     assert plan["runs"].blob_path.startswith(
         "environment=staging/compute=azure-ml/owner=team46/"
     )
+
+
+def test_build_upload_plan_can_partition_by_trigger_type(tmp_path):
+    run_dir = tmp_path / "run-003"
+    run_dir.mkdir()
+    for name in [
+        "model_output_snapshot.csv",
+        "model_drift_log.json",
+        "report.md",
+        "curated_pricing.csv",
+    ]:
+        (run_dir / name).write_text("x")
+    (run_dir / "model_run_log.json").write_text(json.dumps({"run_id": "run-003"}))
+
+    plan = build_upload_plan(
+        run_dir,
+        environment="staging",
+        run_owner="team46",
+        compute_target="azure-ml",
+        trigger_type="event-grid",
+    )
+
+    assert plan["runs"].blob_path.startswith(
+        "environment=staging/compute=azure-ml/trigger=event-grid/owner=team46/"
+    )

@@ -23,6 +23,10 @@ class AzureStorageFlowRequest:
     environment: str
     run_owner: str
     compute_target: str | None
+    trigger_type: str | None
+    model_repo: str | None
+    model_ref: str | None
+    model_commit_sha: str | None
     run_id: str | None
     output_root: str | None
     input_container: str
@@ -45,6 +49,10 @@ def main() -> int:
     parser.add_argument("--environment", default=os.getenv("MLOPS_ENVIRONMENT", "staging"))
     parser.add_argument("--run-owner", default=os.getenv("MLOPS_RUN_OWNER", "team46"))
     parser.add_argument("--compute-target", default=os.getenv("MLOPS_COMPUTE_TARGET"))
+    parser.add_argument("--trigger-type", default=os.getenv("MLOPS_TRIGGER_TYPE"))
+    parser.add_argument("--model-repo", default=os.getenv("MODEL_REPO_GITHUB"))
+    parser.add_argument("--model-ref", default=os.getenv("MODEL_REPO_REF"))
+    parser.add_argument("--model-commit-sha", default=os.getenv("MODEL_REPO_COMMIT_SHA"))
     parser.add_argument("--run-id", default=os.getenv("MLOPS_RUN_ID"))
     parser.add_argument("--output-root", default=os.getenv("MLOPS_OUTPUT_ROOT"))
     parser.add_argument(
@@ -75,6 +83,10 @@ def main() -> int:
         environment=args.environment,
         run_owner=args.run_owner,
         compute_target=args.compute_target,
+        trigger_type=args.trigger_type,
+        model_repo=args.model_repo,
+        model_ref=args.model_ref,
+        model_commit_sha=args.model_commit_sha,
         run_id=resolve_run_id(args.run_id),
         output_root=args.output_root,
         input_container=args.input_container,
@@ -169,6 +181,7 @@ def _run_and_upload(
         input_path=input_path,
         output_root=output_root,
         run_id=request.run_id,
+        run_metadata=_run_metadata(request),
     )
     print(f"azure flow run: run_id={result.run_id} run_dir={result.run_dir}")
 
@@ -177,6 +190,7 @@ def _run_and_upload(
         environment=request.environment,
         run_owner=request.run_owner,
         compute_target=request.compute_target,
+        trigger_type=request.trigger_type,
         containers=request.containers,
     )
 
@@ -196,6 +210,22 @@ def _run_and_upload(
             output_blob.upload_blob(handle, overwrite=True)
         uploaded_blobs[target.container] = target.blob_path
     return result, uploaded_blobs
+
+
+def _run_metadata(request: AzureStorageFlowRequest) -> dict[str, str]:
+    metadata = {
+        "environment": request.environment,
+        "owner": request.run_owner,
+        "trigger_type": request.trigger_type or "manual",
+        "input_blob_path": request.input_blob_path,
+    }
+    optional_values = {
+        "model_repo": request.model_repo,
+        "model_ref": request.model_ref,
+        "model_commit_sha": request.model_commit_sha,
+    }
+    metadata.update({key: value for key, value in optional_values.items() if value})
+    return metadata
 
 
 if __name__ == "__main__":

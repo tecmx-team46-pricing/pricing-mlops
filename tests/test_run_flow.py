@@ -84,3 +84,35 @@ def test_local_flow_accepts_external_run_id(tmp_path):
 
     assert result.run_id == "20260516T000000Z-gha-1"
     assert (output_root / "20260516T000000Z-gha-1" / "model_run_log.json").exists()
+
+
+def test_local_flow_records_runtime_metadata(tmp_path):
+    input_path = tmp_path / "sample.csv"
+    output_root = tmp_path / "runs"
+    input_path.write_text(
+        "\n".join(
+            [
+                "kpn,vpareadescription,distysegment,current_price,P0_PRICE,P20_PRICE,P50_PRICE,P85_PRICE,P100_PRICE",
+                "KPN-001,north,enterprise,10.0,8.0,9.0,10.0,11.0,13.0",
+            ]
+        )
+        + "\n"
+    )
+
+    result = run_local_flow(
+        input_path=input_path,
+        output_root=output_root,
+        run_id="20260516T000000Z-event-grid",
+        run_metadata={
+            "trigger_type": "event-grid",
+            "model_repo": "tecmx-team46-pricing/pricing-mlops",
+            "model_ref": "PoC/model-flow-template",
+            "model_commit_sha": "abc123",
+        },
+    )
+
+    run_log = json.loads((result.run_dir / "model_run_log.json").read_text())
+    assert run_log["trigger_type"] == "event-grid"
+    assert run_log["model_repo"] == "tecmx-team46-pricing/pricing-mlops"
+    assert run_log["model_ref"] == "PoC/model-flow-template"
+    assert run_log["model_commit_sha"] == "abc123"
