@@ -23,6 +23,7 @@ def main() -> int:
     parser.add_argument("--output-dir", required=True)
     parser.add_argument("--prepared-container", default="")
     parser.add_argument("--prepared-prefix", default="")
+    parser.add_argument("--flow-token", default="")
     args = parser.parse_args()
 
     try:
@@ -33,6 +34,7 @@ def main() -> int:
             output_dir=Path(args.output_dir),
             prepared_container=args.prepared_container,
             prepared_prefix=args.prepared_prefix,
+            flow_token=Path(args.flow_token) if args.flow_token else None,
         )
     except Exception as exc:
         print(f"validate_prepare failed: {exc}", file=sys.stderr)
@@ -47,6 +49,7 @@ def run_component(
     output_dir: Path,
     prepared_container: str = "",
     prepared_prefix: str = "",
+    flow_token: Path | None = None,
 ) -> None:
     output_dir.mkdir(parents=True, exist_ok=True)
     input_path = output_dir / "input.csv"
@@ -64,6 +67,7 @@ def run_component(
             blob_prefix=prepared_prefix,
             files=[output_dir / "curated_input.csv", output_dir / "validation_metadata.json"],
         )
+    _write_flow_token(flow_token, {"stage": "validate_prepare", "input_blob_path": input_blob_path})
 
 
 def prepare_local_input(input_path: Path, output_dir: Path, input_blob_path: str) -> None:
@@ -108,6 +112,13 @@ def _upload_files(storage_account: str, container: str, blob_prefix: str, files:
         blob = blob_service.get_blob_client(container=container, blob=blob_path)
         with file_path.open("rb") as handle:
             blob.upload_blob(handle, overwrite=True)
+
+
+def _write_flow_token(flow_token: Path | None, payload: dict[str, str]) -> None:
+    if flow_token is None:
+        return
+    flow_token.parent.mkdir(parents=True, exist_ok=True)
+    flow_token.write_text(json.dumps(payload, sort_keys=True) + "\n", encoding="utf-8")
 
 
 if __name__ == "__main__":

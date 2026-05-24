@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import argparse
+import json
 from pathlib import Path
 import sys
 import tempfile
@@ -18,6 +19,7 @@ from scripts.upload_run_outputs import build_upload_plan
 def main() -> int:
     parser = argparse.ArgumentParser(description="Publish Pricing MLOps component outputs to Azure Storage.")
     parser.add_argument("--run-dir", default="")
+    parser.add_argument("--score-token", default="")
     parser.add_argument("--storage-account", required=True)
     parser.add_argument("--run-artifacts-container", default="")
     parser.add_argument("--run-artifacts-prefix", default="")
@@ -36,6 +38,7 @@ def main() -> int:
     try:
         publish_component_outputs(
             run_dir=Path(args.run_dir) if args.run_dir else None,
+            score_token=Path(args.score_token) if args.score_token else None,
             storage_account=args.storage_account,
             run_artifacts_container=args.run_artifacts_container,
             run_artifacts_prefix=args.run_artifacts_prefix,
@@ -66,11 +69,13 @@ def publish_component_outputs(
     compute_target: str,
     trigger_type: str,
     containers: dict[str, str],
+    score_token: Path | None = None,
     run_artifacts_container: str = "",
     run_artifacts_prefix: str = "",
 ) -> dict[str, str]:
     from azure.storage.blob import BlobServiceClient
 
+    _require_flow_token(score_token, "score_evaluate")
     account_url = f"https://{storage_account}.blob.core.windows.net"
     blob_service = BlobServiceClient(account_url=account_url, credential=build_azure_credential())
     if run_dir is None:
@@ -95,6 +100,16 @@ def publish_component_outputs(
         trigger_type=trigger_type,
         containers=containers,
     )
+
+
+def _require_flow_token(flow_token: Path | None, expected_stage: str) -> None:
+    if flow_token is None:
+        return
+    if not flow_token.exists():
+        raise FileNotFoundError(f"flow token is missing: {flow_token}")
+    token = json.loads(flow_token.read_text(encoding="utf-8"))
+    if token.get("stage") != expected_stage:
+        raise ValueError(f"flow token expected stage {expected_stage}, got {token.get('stage')}")
 
 
 def _download_and_publish(

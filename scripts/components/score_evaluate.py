@@ -27,7 +27,9 @@ from pricing_mlops.run import (
 def main() -> int:
     parser = argparse.ArgumentParser(description="Score curated pricing data and write run artifacts.")
     parser.add_argument("--prepared-dir", default="")
+    parser.add_argument("--validation-token", default="")
     parser.add_argument("--output-dir", required=True)
+    parser.add_argument("--flow-token", default="")
     parser.add_argument("--storage-account", default="")
     parser.add_argument("--prepared-container", default="")
     parser.add_argument("--prepared-prefix", default="")
@@ -46,7 +48,9 @@ def main() -> int:
     try:
         run_component(
             prepared_dir=Path(args.prepared_dir) if args.prepared_dir else None,
+            validation_token=Path(args.validation_token) if args.validation_token else None,
             output_dir=Path(args.output_dir),
+            flow_token=Path(args.flow_token) if args.flow_token else None,
             storage_account=args.storage_account,
             prepared_container=args.prepared_container,
             prepared_prefix=args.prepared_prefix,
@@ -75,6 +79,8 @@ def run_component(
     run_id: str,
     input_blob_path: str,
     trigger_type: str,
+    validation_token: Path | None = None,
+    flow_token: Path | None = None,
     storage_account: str = "",
     prepared_container: str = "",
     prepared_prefix: str = "",
@@ -85,6 +91,7 @@ def run_component(
     model_commit_sha: str = "",
 ) -> None:
     output_dir.mkdir(parents=True, exist_ok=True)
+    _require_flow_token(validation_token, "validate_prepare")
     if prepared_dir is None:
         prepared_dir = output_dir / "_prepared"
         _download_prefix(
@@ -155,6 +162,7 @@ def run_component(
             blob_prefix=run_artifacts_prefix,
             files=[curated_path, snapshot_path, drift_path, run_log_path, report_path],
         )
+    _write_flow_token(flow_token, {"stage": "score_evaluate", "run_id": run_id})
 
 
 def _blob_service(storage_account: str):
@@ -202,6 +210,23 @@ def _upload_files(storage_account: str, container: str, blob_prefix: str, files:
         blob = blob_service.get_blob_client(container=container, blob=f"{prefix}/{file_path.name}")
         with file_path.open("rb") as handle:
             blob.upload_blob(handle, overwrite=True)
+
+
+def _require_flow_token(flow_token: Path | None, expected_stage: str) -> None:
+    if flow_token is None:
+        return
+    if not flow_token.exists():
+        raise FileNotFoundError(f"flow token is missing: {flow_token}")
+    token = json.loads(flow_token.read_text(encoding="utf-8"))
+    if token.get("stage") != expected_stage:
+        raise ValueError(f"flow token expected stage {expected_stage}, got {token.get('stage')}")
+
+
+def _write_flow_token(flow_token: Path | None, payload: dict[str, str]) -> None:
+    if flow_token is None:
+        return
+    flow_token.parent.mkdir(parents=True, exist_ok=True)
+    flow_token.write_text(json.dumps(payload, sort_keys=True) + "\n", encoding="utf-8")
 
 
 if __name__ == "__main__":
