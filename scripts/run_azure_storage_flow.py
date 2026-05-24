@@ -145,7 +145,7 @@ def run_azure_storage_flow(request: AzureStorageFlowRequest) -> AzureStorageFlow
 
 
 def build_azure_credential():
-    if os.getenv("AZUREML_RUN_ID") and not os.getenv("AZURE_CLIENT_ID"):
+    if os.getenv("AZUREML_RUN_ID") and os.getenv("MLOPS_FORCE_DEFAULT_CREDENTIAL", "false").lower() != "true":
         try:
             from azure.ai.ml.identity import AzureMLOnBehalfOfCredential
 
