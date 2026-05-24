@@ -4,6 +4,8 @@ Repositorio funcional del flujo Pricing MLOps. Contiene validacion de datos, cur
 
 Este repo no crea infraestructura Azure. Consume la plataforma definida en `pricing-mlops-platform`.
 
+El flujo actual se identifica como `pricing-baseline-flow`. Es un baseline operativo controlado para validar contrato, orquestacion, trazabilidad y storage layout; no es el modelo productivo definitivo.
+
 ## Flujo Actual
 
 ```text

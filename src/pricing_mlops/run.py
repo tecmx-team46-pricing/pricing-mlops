@@ -12,6 +12,9 @@ from pricing_mlops.drift import evaluate_drift
 from pricing_mlops.modeling.predict import score_pricing
 from pricing_mlops.validation import validate_pricing_input
 
+MODEL_VERSION = "pricing-baseline-flow/0.1.0"
+LOGIC_VERSION = "controlled-pricing-baseline-v1"
+
 
 @dataclass(frozen=True)
 class LocalFlowResult:
@@ -61,7 +64,8 @@ def run_local_flow(
         "finished_at_utc": finished_at.isoformat(),
         "dataset_version": "local-sample",
         "schema_version": "pricing_input_schema_v1",
-        "model_version": "pricing-pass-through-template/0.1.0",
+        "model_version": MODEL_VERSION,
+        "logic_version": LOGIC_VERSION,
         "config_version": "pricing_rules_config_v1",
         "git_commit_hash": git_commit_hash(),
         "artifacts": {

@@ -20,6 +20,8 @@ input_blob_path
 
 `storage_account` debe ser el Storage MLOps funcional publicado por plataforma. En `staging` es `<mlops-storage-account>`.
 
+La identidad de metadata del flujo es `pricing-baseline-flow/0.1.0` con `logic_version=controlled-pricing-baseline-v1`. Es baseline operativo, no modelo productivo definitivo.
+
 ## Containers Funcionales
 
 El modelo solo lee datos masked desde:

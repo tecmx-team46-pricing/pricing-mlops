@@ -13,7 +13,7 @@ def evaluate_drift(records: Iterable[Mapping[str, Any]]) -> dict[str, Any]:
     status = _overall_status(metrics)
     return {
         "status": status,
-        "reason": "local template compares simple dispersion metrics from the current sample",
+        "reason": "baseline flow compares simple dispersion metrics from the current masked input",
         "row_count": len(rows),
         "metrics": metrics,
         "recommended_action": _recommended_action(status),

@@ -19,6 +19,8 @@ scripts/run_model_flow_function.sh
 
 La Function solo orquesta. Azure ML ejecuta validacion, curated/features, scoring, drift y reportes.
 
+El flujo funcional se identifica como `pricing-baseline-flow`. Mantiene un scoring controlado para probar el contrato end-to-end y queda preparado para reemplazarse por un modelo real o baseline formal aprobado.
+
 ## Inputs De Plataforma
 
 ```text

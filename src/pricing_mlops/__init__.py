@@ -1,4 +1,4 @@
-"""Functional model flow template for Pricing MLOps."""
+"""Functional Pricing MLOps flow."""
 
 __all__ = ["__version__"]
 

@@ -35,7 +35,8 @@ def test_local_flow_writes_expected_artifacts(tmp_path):
     assert run_log["output_path"] == str(run_dir)
     assert run_log["dataset_version"] == "local-sample"
     assert run_log["schema_version"] == "pricing_input_schema_v1"
-    assert run_log["model_version"] == "pricing-pass-through-template/0.1.0"
+    assert run_log["model_version"] == "pricing-baseline-flow/0.1.0"
+    assert run_log["logic_version"] == "controlled-pricing-baseline-v1"
     assert run_log["config_version"] == "pricing_rules_config_v1"
     assert "git_commit_hash" in run_log
     assert run_log["artifacts"]["curated_dataset"] == "curated_pricing.csv"

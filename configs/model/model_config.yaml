@@ -1,5 +1,5 @@
 model:
-  name: pricing-pass-through-template
+  name: pricing-baseline-flow
   version: 0.1.0
   scoring_mode: controlled_pass_through
   default_recommendation_source: P50_PRICE
@@ -14,5 +14,6 @@ validation:
 versions:
   dataset_version: local-sample
   schema_version: pricing_input_schema_v1
-  model_version: pricing-pass-through-template/0.1.0
+  model_version: pricing-baseline-flow/0.1.0
+  logic_version: controlled-pricing-baseline-v1
   config_version: pricing_rules_config_v1
