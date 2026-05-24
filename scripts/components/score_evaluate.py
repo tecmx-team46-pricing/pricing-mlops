@@ -25,8 +25,13 @@ from pricing_mlops.run import (
 
 def main() -> int:
     parser = argparse.ArgumentParser(description="Score curated pricing data and write run artifacts.")
-    parser.add_argument("--prepared-dir", required=True)
+    parser.add_argument("--prepared-dir", default="")
     parser.add_argument("--output-dir", required=True)
+    parser.add_argument("--storage-account", default="")
+    parser.add_argument("--prepared-container", default="")
+    parser.add_argument("--prepared-prefix", default="")
+    parser.add_argument("--run-artifacts-container", default="")
+    parser.add_argument("--run-artifacts-prefix", default="")
     parser.add_argument("--environment", required=True)
     parser.add_argument("--run-owner", required=True)
     parser.add_argument("--run-id", required=True)
@@ -39,8 +44,13 @@ def main() -> int:
 
     try:
         run_component(
-            prepared_dir=Path(args.prepared_dir),
+            prepared_dir=Path(args.prepared_dir) if args.prepared_dir else None,
             output_dir=Path(args.output_dir),
+            storage_account=args.storage_account,
+            prepared_container=args.prepared_container,
+            prepared_prefix=args.prepared_prefix,
+            run_artifacts_container=args.run_artifacts_container,
+            run_artifacts_prefix=args.run_artifacts_prefix,
             environment=args.environment,
             run_owner=args.run_owner,
             run_id=args.run_id,
@@ -57,18 +67,32 @@ def main() -> int:
 
 
 def run_component(
-    prepared_dir: Path,
+    prepared_dir: Path | None,
     output_dir: Path,
     environment: str,
     run_owner: str,
     run_id: str,
     input_blob_path: str,
     trigger_type: str,
+    storage_account: str = "",
+    prepared_container: str = "",
+    prepared_prefix: str = "",
+    run_artifacts_container: str = "",
+    run_artifacts_prefix: str = "",
     model_repo: str = "",
     model_ref: str = "",
     model_commit_sha: str = "",
 ) -> None:
     output_dir.mkdir(parents=True, exist_ok=True)
+    if prepared_dir is None:
+        prepared_dir = output_dir / "_prepared"
+        _download_prefix(
+            storage_account=storage_account,
+            container=prepared_container,
+            blob_prefix=prepared_prefix,
+            destination=prepared_dir,
+            filenames=["curated_input.csv", "validation_metadata.json"],
+        )
     curated = read_csv_records(prepared_dir / "curated_input.csv")
     validation_metadata = json.loads((prepared_dir / "validation_metadata.json").read_text(encoding="utf-8"))
 
@@ -123,6 +147,48 @@ def run_component(
 
     run_log_path.write_text(json.dumps(run_log, indent=2, sort_keys=True) + "\n", encoding="utf-8")
     report_path.write_text(_render_report(run_log, drift), encoding="utf-8")
+    if storage_account and run_artifacts_container and run_artifacts_prefix:
+        _upload_files(
+            storage_account=storage_account,
+            container=run_artifacts_container,
+            blob_prefix=run_artifacts_prefix,
+            files=[curated_path, snapshot_path, drift_path, run_log_path, report_path],
+        )
+
+
+def _blob_service(storage_account: str):
+    from azure.storage.blob import BlobServiceClient
+
+    from scripts.run_azure_storage_flow import build_azure_credential
+
+    account_url = f"https://{storage_account}.blob.core.windows.net"
+    return BlobServiceClient(account_url=account_url, credential=build_azure_credential())
+
+
+def _download_prefix(
+    storage_account: str,
+    container: str,
+    blob_prefix: str,
+    destination: Path,
+    filenames: list[str],
+) -> None:
+    if not storage_account or not container or not blob_prefix:
+        raise ValueError("storage account, prepared container and prepared prefix are required without --prepared-dir")
+    destination.mkdir(parents=True, exist_ok=True)
+    blob_service = _blob_service(storage_account)
+    prefix = blob_prefix.strip("/")
+    for filename in filenames:
+        blob = blob_service.get_blob_client(container=container, blob=f"{prefix}/{filename}")
+        (destination / filename).write_bytes(blob.download_blob().readall())
+
+
+def _upload_files(storage_account: str, container: str, blob_prefix: str, files: list[Path]) -> None:
+    blob_service = _blob_service(storage_account)
+    prefix = blob_prefix.strip("/")
+    for file_path in files:
+        blob = blob_service.get_blob_client(container=container, blob=f"{prefix}/{file_path.name}")
+        with file_path.open("rb") as handle:
+            blob.upload_blob(handle, overwrite=True)
 
 
 if __name__ == "__main__":

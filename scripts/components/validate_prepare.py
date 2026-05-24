@@ -21,6 +21,8 @@ def main() -> int:
     parser.add_argument("--input-container", default="raw-masked")
     parser.add_argument("--input-blob-path", required=True)
     parser.add_argument("--output-dir", required=True)
+    parser.add_argument("--prepared-container", default="")
+    parser.add_argument("--prepared-prefix", default="")
     args = parser.parse_args()
 
     try:
@@ -29,6 +31,8 @@ def main() -> int:
             input_container=args.input_container,
             input_blob_path=args.input_blob_path,
             output_dir=Path(args.output_dir),
+            prepared_container=args.prepared_container,
+            prepared_prefix=args.prepared_prefix,
         )
     except Exception as exc:
         print(f"validate_prepare failed: {exc}", file=sys.stderr)
@@ -41,6 +45,8 @@ def run_component(
     input_container: str,
     input_blob_path: str,
     output_dir: Path,
+    prepared_container: str = "",
+    prepared_prefix: str = "",
 ) -> None:
     output_dir.mkdir(parents=True, exist_ok=True)
     input_path = output_dir / "input.csv"
@@ -51,6 +57,13 @@ def run_component(
         destination=input_path,
     )
     prepare_local_input(input_path=input_path, output_dir=output_dir, input_blob_path=input_blob_path)
+    if prepared_container and prepared_prefix:
+        _upload_files(
+            storage_account=storage_account,
+            container=prepared_container,
+            blob_prefix=prepared_prefix,
+            files=[output_dir / "curated_input.csv", output_dir / "validation_metadata.json"],
+        )
 
 
 def prepare_local_input(input_path: Path, output_dir: Path, input_blob_path: str) -> None:
@@ -82,6 +95,19 @@ def _download_blob(storage_account: str, container: str, blob_path: str, destina
     blob_service = BlobServiceClient(account_url=account_url, credential=build_azure_credential())
     blob = blob_service.get_blob_client(container=container, blob=blob_path)
     destination.write_bytes(blob.download_blob().readall())
+
+
+def _upload_files(storage_account: str, container: str, blob_prefix: str, files: list[Path]) -> None:
+    from azure.storage.blob import BlobServiceClient
+
+    account_url = f"https://{storage_account}.blob.core.windows.net"
+    blob_service = BlobServiceClient(account_url=account_url, credential=build_azure_credential())
+    prefix = blob_prefix.strip("/")
+    for file_path in files:
+        blob_path = f"{prefix}/{file_path.name}" if prefix else file_path.name
+        blob = blob_service.get_blob_client(container=container, blob=blob_path)
+        with file_path.open("rb") as handle:
+            blob.upload_blob(handle, overwrite=True)
 
 
 if __name__ == "__main__":
