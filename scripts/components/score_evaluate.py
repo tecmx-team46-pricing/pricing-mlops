@@ -215,6 +215,8 @@ def _upload_files(storage_account: str, container: str, blob_prefix: str, files:
 def _require_flow_token(flow_token: Path | None, expected_stage: str) -> None:
     if flow_token is None:
         return
+    if flow_token.suffix != ".json":
+        flow_token = flow_token / "flow_token.json"
     if not flow_token.exists():
         raise FileNotFoundError(f"flow token is missing: {flow_token}")
     token = json.loads(flow_token.read_text(encoding="utf-8"))
@@ -225,6 +227,8 @@ def _require_flow_token(flow_token: Path | None, expected_stage: str) -> None:
 def _write_flow_token(flow_token: Path | None, payload: dict[str, str]) -> None:
     if flow_token is None:
         return
+    if flow_token.suffix != ".json":
+        flow_token = flow_token / "flow_token.json"
     flow_token.parent.mkdir(parents=True, exist_ok=True)
     flow_token.write_text(json.dumps(payload, sort_keys=True) + "\n", encoding="utf-8")
 

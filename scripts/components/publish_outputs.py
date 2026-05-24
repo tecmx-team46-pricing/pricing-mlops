@@ -105,6 +105,8 @@ def publish_component_outputs(
 def _require_flow_token(flow_token: Path | None, expected_stage: str) -> None:
     if flow_token is None:
         return
+    if flow_token.suffix != ".json":
+        flow_token = flow_token / "flow_token.json"
     if not flow_token.exists():
         raise FileNotFoundError(f"flow token is missing: {flow_token}")
     token = json.loads(flow_token.read_text(encoding="utf-8"))
