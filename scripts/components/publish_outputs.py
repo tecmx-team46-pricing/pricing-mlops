@@ -5,6 +5,7 @@ import argparse
 from pathlib import Path
 import sys
 import tempfile
+import time
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(REPO_ROOT))
@@ -119,7 +120,7 @@ def _download_and_publish(
         "report.md",
     ]:
         blob = blob_service.get_blob_client(container=run_artifacts_container, blob=f"{prefix}/{filename}")
-        (run_dir / filename).write_bytes(blob.download_blob().readall())
+        (run_dir / filename).write_bytes(_download_with_retry(blob, f"{prefix}/{filename}"))
     return _publish_from_dir(
         blob_service=blob_service,
         run_dir=run_dir,
@@ -129,6 +130,18 @@ def _download_and_publish(
         trigger_type=trigger_type,
         containers=containers,
     )
+
+
+def _download_with_retry(blob, label: str, attempts: int = 60, delay_seconds: int = 10) -> bytes:
+    for attempt in range(1, attempts + 1):
+        try:
+            return blob.download_blob().readall()
+        except Exception as exc:
+            if attempt == attempts:
+                raise
+            print(f"waiting for run artifact: {label} attempt={attempt} error={exc}")
+            time.sleep(delay_seconds)
+    raise RuntimeError(f"run artifact was not available: {label}")
 
 
 def _publish_from_dir(

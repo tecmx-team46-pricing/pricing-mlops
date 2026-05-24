@@ -6,6 +6,7 @@ from datetime import datetime, timezone
 import json
 from pathlib import Path
 import sys
+import time
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(REPO_ROOT))
@@ -179,7 +180,19 @@ def _download_prefix(
     prefix = blob_prefix.strip("/")
     for filename in filenames:
         blob = blob_service.get_blob_client(container=container, blob=f"{prefix}/{filename}")
-        (destination / filename).write_bytes(blob.download_blob().readall())
+        (destination / filename).write_bytes(_download_with_retry(blob, f"{prefix}/{filename}"))
+
+
+def _download_with_retry(blob, label: str, attempts: int = 60, delay_seconds: int = 10) -> bytes:
+    for attempt in range(1, attempts + 1):
+        try:
+            return blob.download_blob().readall()
+        except Exception as exc:
+            if attempt == attempts:
+                raise
+            print(f"waiting for prepared artifact: {label} attempt={attempt} error={exc}")
+            time.sleep(delay_seconds)
+    raise RuntimeError(f"prepared artifact was not available: {label}")
 
 
 def _upload_files(storage_account: str, container: str, blob_prefix: str, files: list[Path]) -> None:
