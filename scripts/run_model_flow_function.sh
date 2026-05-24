@@ -61,6 +61,20 @@ if [[ -z "${AZURE_FUNCTION_APP}" ]]; then
 fi
 
 if [[ -z "${AZURE_ML_WORKSPACE}" ]]; then
+  AZURE_ML_WORKSPACE="$(az functionapp config appsettings list \
+    --resource-group "${RESOURCE_GROUP}" \
+    --name "${AZURE_FUNCTION_APP}" \
+    --query "[?name=='AZURE_ML_WORKSPACE'].value | [0]" -o tsv)"
+fi
+
+if [[ -z "${AZURE_ML_WORKSPACE}" ]]; then
+  AZURE_ML_WORKSPACE="$(az resource list \
+    --resource-group "${RESOURCE_GROUP}" \
+    --resource-type Microsoft.MachineLearningServices/workspaces \
+    --query "[?contains(name, '-v2-')].name | [0]" -o tsv)"
+fi
+
+if [[ -z "${AZURE_ML_WORKSPACE}" ]]; then
   AZURE_ML_WORKSPACE="$(az resource list \
     --resource-group "${RESOURCE_GROUP}" \
     --resource-type Microsoft.MachineLearningServices/workspaces \

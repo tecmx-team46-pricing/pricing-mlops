@@ -8,7 +8,7 @@ az account set --subscription "<azure-subscription-name>"
 
 AZURE_FUNCTION_APP=func-pricing-mlops-staging-<suffix> \
 AZURE_RESOURCE_GROUP=rg-pricing-mlops-staging \
-AZURE_ML_WORKSPACE=mlw-pricing-mlops-staging-<suffix> \
+AZURE_ML_WORKSPACE=mlw-pricing-mlops-stg-v2-<suffix> \
 scripts/run_model_flow_function.sh staging team46 samples/sample_pricing_v1.csv
 ```
 
@@ -35,6 +35,6 @@ scripts/run_model_flow_function.sh staging team46 samples/sample_pricing_v1.csv
 ## Portal
 
 - Function logs: Function App `func-pricing-mlops-staging-<suffix>` > Log stream.
-- AML jobs: Workspace `mlw-pricing-mlops-staging-<suffix>` > Jobs.
+- AML jobs: Workspace `mlw-pricing-mlops-stg-v2-<suffix>` > Jobs.
 - Outputs: Storage `<mlops-storage-account>` > Containers.
 - Costos: Cost Management > Cost analysis > filtrar `rg-pricing-mlops-staging`.

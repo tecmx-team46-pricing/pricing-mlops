@@ -53,7 +53,7 @@ az account set --subscription "<azure-subscription-name>"
 
 AZURE_FUNCTION_APP=func-pricing-mlops-staging-<suffix> \
 AZURE_RESOURCE_GROUP=rg-pricing-mlops-staging \
-AZURE_ML_WORKSPACE=mlw-pricing-mlops-staging-<suffix> \
+AZURE_ML_WORKSPACE=mlw-pricing-mlops-stg-v2-<suffix> \
 scripts/run_model_flow_function.sh staging team46 samples/sample_pricing_v1.csv
 ```
 
@@ -115,7 +115,7 @@ Artefactos:
 | `artifacts` | `curated_pricing.csv` |
 | `curated` | `curated_pricing.csv` |
 
-Estos outputs funcionales se escriben solo en el Storage MLOps publicado por plataforma (`AZURE_STORAGE_ACCOUNT`, hoy `<mlops-storage-account>` en `staging`). Azure ML puede crear snapshots de codigo, logs, environments y artifacts runtime en su storage interno; este repo no los interpreta como outputs del modelo.
+Estos outputs funcionales se escriben solo en el Storage MLOps publicado por plataforma (`AZURE_STORAGE_ACCOUNT`, hoy `<mlops-storage-account>` en `staging`). Azure ML crea snapshots de codigo, logs, environments y artifacts runtime en el Storage runtime del workspace activo; este repo no los interpreta como outputs del modelo.
 
 ## Documentacion
 
