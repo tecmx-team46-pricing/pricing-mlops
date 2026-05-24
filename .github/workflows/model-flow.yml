@@ -114,5 +114,5 @@ jobs:
       - name: Call Azure Function orchestrator
         shell: bash
         env:
-          PRICING_MLOPS_PLATFORM_REPO: ${{ github.workspace }}/pricing-mlops-platform
-        run: scripts/run_model_flow_function.sh "${{ inputs.environment }}" "${{ inputs.run_owner }}" "${{ inputs.input_blob_path }}"
+          PRICING_MLOPS_REPO: ${{ github.workspace }}
+        run: pricing-mlops-platform/mlops/scripts/run_model_flow_function.sh "${{ inputs.environment }}" "${{ inputs.run_owner }}" "${{ inputs.input_blob_path }}"

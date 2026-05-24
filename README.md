@@ -79,7 +79,7 @@ El script:
 |---|---|---|
 | `pull_request` | Compile, tests, validacion sample y flow local. | No |
 | `workflow_dispatch`, `run_azure_flow=false` | Misma validacion local. | No |
-| `workflow_dispatch`, `run_azure_flow=true` | Usa wrapper de compatibilidad; la operacion principal vive en `pricing-mlops-platform/mlops/scripts/run_model_flow_function.sh`. | Si |
+| `workflow_dispatch`, `run_azure_flow=true` | Hace checkout de `pricing-mlops-platform` y llama `pricing-mlops-platform/mlops/scripts/run_model_flow_function.sh`. | Si |
 
 Ambientes permitidos: `staging`, `validation`. No se aceptan sandboxes ni prod.
 
@@ -136,5 +136,6 @@ Estos outputs funcionales se escriben solo en el Storage MLOps publicado por pla
 - No account keys ni connection strings.
 - No infraestructura desde este repo.
 - No runtime Azure Functions ni YAML de command job AML en este repo; viven en `pricing-mlops-platform/mlops/`.
+- No scripts de publicacion u operacion de Azure Function en este repo; usar `pricing-mlops-platform/mlops/scripts/`.
 - No Container Apps/Docker como ruta activa.
 - No scoring/drift pesado dentro de Azure Function.
