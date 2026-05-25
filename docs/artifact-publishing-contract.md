@@ -53,6 +53,23 @@ Sink results are explicit:
 
 Required sinks can fail the overall publish. Optional sinks produce `partial` so operators can see the failure without hiding successful required publication.
 
+## Declarative Configuration
+
+Publication can be selected by environment variables without changing ML code:
+
+| Variable | Default | Purpose |
+|---|---|---|
+| `MLOPS_ARTIFACT_SINKS` | `azure_blob` | Comma-separated enabled sinks. Supported names are `azure_blob`, `azure_ml`, `sql_metadata`, and `local` where the caller wires the dependency. |
+| `MLOPS_OPTIONAL_ARTIFACT_SINKS` | `azure_ml,sql_metadata` | Comma-separated sinks that should not fail required artifact publication. |
+| `MLOPS_CONTAINER_CURATED` | `curated` | Curated output container. |
+| `MLOPS_CONTAINER_RUNS` | `runs` | Run metadata container. |
+| `MLOPS_CONTAINER_SNAPSHOTS` | `snapshots` | Snapshot container. |
+| `MLOPS_CONTAINER_DRIFT_LOGS` | `drift-logs` | Drift log container. |
+| `MLOPS_CONTAINER_REPORTS` | `reports` | Report container. |
+| `MLOPS_CONTAINER_ARTIFACTS` | `artifacts` | General artifacts container. |
+
+The current production path enables `azure_blob` only. Azure ML and SQL sinks are implemented as optional fan-out destinations and must be explicitly wired by the caller with the appropriate client/connection.
+
 ## Implemented Sinks
 
 | Sink | Scope |
@@ -71,6 +88,14 @@ Each sink reports published and failed artifact keys. Callers must inspect `Publ
 ## Retry
 
 `RetryPolicy` wraps transient sink operations. The default policy retries common Azure SDK transport/timeout error classes and does not retry definitive validation or contract errors.
+
+Each retry opens the source file again before uploading, so a partially consumed stream is not reused after a transient upload failure.
+
+## Observability And Security
+
+Each sink returns a `SinkPublishResult` containing sink name, status, published targets, failed targets, and optional manifest URI. Callers should log this object as structured metadata.
+
+No sink accepts account keys or connection strings as part of the neutral domain contract. Azure clients and SQL connections are injected by the caller, which keeps credential acquisition in infrastructure code.
 
 ## Compatibility
 

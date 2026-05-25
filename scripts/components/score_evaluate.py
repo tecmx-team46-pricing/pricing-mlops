@@ -13,6 +13,7 @@ sys.path.insert(0, str(REPO_ROOT))
 sys.path.insert(0, str(REPO_ROOT / "src"))
 
 from pricing_mlops.drift import evaluate_drift
+from pricing_mlops.artifacts import RunMetadata
 from pricing_mlops.modeling.predict import score_pricing
 from pricing_mlops.run import (
     LOGIC_VERSION,
@@ -124,39 +125,35 @@ def run_component(
     drift_path.write_text(json.dumps(drift, indent=2, sort_keys=True) + "\n", encoding="utf-8")
     finished_at = datetime.now(timezone.utc)
 
-    run_log = {
-        "run_id": run_id,
-        "status": "succeeded",
-        "input_path": str(prepared_dir / "curated_input.csv"),
-        "output_path": str(output_dir),
-        "row_count": validation_metadata["row_count"],
-        "validation_status": validation_metadata["validation_status"],
-        "drift_status": drift["status"],
-        "started_at_utc": started_at.isoformat(),
-        "finished_at_utc": finished_at.isoformat(),
-        "dataset_version": "local-sample",
-        "schema_version": "pricing_input_schema_v1",
-        "model_version": MODEL_VERSION,
-        "logic_version": LOGIC_VERSION,
-        "config_version": "pricing_rules_config_v1",
-        "git_commit_hash": git_commit_hash(),
-        "environment": environment,
-        "owner": run_owner,
-        "trigger_type": trigger_type,
-        "input_blob_path": input_blob_path,
-        "artifacts": {
+    run_metadata = RunMetadata(
+        run_id=run_id,
+        status="succeeded",
+        row_count=int(validation_metadata["row_count"]),
+        validation_status=str(validation_metadata["validation_status"]),
+        drift_status=str(drift["status"]),
+        started_at_utc=started_at.isoformat(),
+        finished_at_utc=finished_at.isoformat(),
+        model_version=MODEL_VERSION,
+        logic_version=LOGIC_VERSION,
+        git_commit_hash=git_commit_hash(),
+        environment=environment,
+        owner=run_owner,
+        trigger_type=trigger_type,
+        input_blob_path=input_blob_path,
+        model_repo=model_repo or None,
+        model_ref=model_ref or None,
+        model_commit_sha=model_commit_sha or None,
+    )
+    run_log = run_metadata.to_log_dict(
+        output_path=str(output_dir),
+        artifacts={
             "curated_dataset": curated_path.name,
             "model_output_snapshot": snapshot_path.name,
             "model_drift_log": drift_path.name,
             "report": report_path.name,
         },
-    }
-    optional_metadata = {
-        "model_repo": model_repo,
-        "model_ref": model_ref,
-        "model_commit_sha": model_commit_sha,
-    }
-    run_log.update({key: value for key, value in optional_metadata.items() if value})
+    )
+    run_log["input_path"] = str(prepared_dir / "curated_input.csv")
 
     run_log_path.write_text(json.dumps(run_log, indent=2, sort_keys=True) + "\n", encoding="utf-8")
     report_path.write_text(_render_report(run_log, drift), encoding="utf-8")

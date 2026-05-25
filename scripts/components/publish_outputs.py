@@ -15,6 +15,7 @@ sys.path.insert(0, str(REPO_ROOT / "src"))
 from scripts.run_azure_storage_flow import build_azure_credential
 from scripts.components.score_evaluate import run_component as run_score_evaluate
 from scripts.upload_run_outputs import publish_run_outputs_with_blob_sink
+from pricing_mlops.artifacts import PublishingConfig
 
 
 def main() -> int:
@@ -34,12 +35,13 @@ def main() -> int:
     parser.add_argument("--model-repo", default="")
     parser.add_argument("--model-ref", default="")
     parser.add_argument("--model-commit-sha", default="")
-    parser.add_argument("--curated-container", default="curated")
-    parser.add_argument("--runs-container", default="runs")
-    parser.add_argument("--snapshots-container", default="snapshots")
-    parser.add_argument("--drift-logs-container", default="drift-logs")
-    parser.add_argument("--reports-container", default="reports")
-    parser.add_argument("--artifacts-container", default="artifacts")
+    publishing_config = PublishingConfig.from_env()
+    parser.add_argument("--curated-container", default=publishing_config.containers["curated"])
+    parser.add_argument("--runs-container", default=publishing_config.containers["runs"])
+    parser.add_argument("--snapshots-container", default=publishing_config.containers["snapshots"])
+    parser.add_argument("--drift-logs-container", default=publishing_config.containers["drift_logs"])
+    parser.add_argument("--reports-container", default=publishing_config.containers["reports"])
+    parser.add_argument("--artifacts-container", default=publishing_config.containers["artifacts"])
     args = parser.parse_args()
 
     try:

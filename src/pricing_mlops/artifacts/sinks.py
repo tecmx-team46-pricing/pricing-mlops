@@ -54,8 +54,7 @@ class AzureBlobArtifactSink:
                     container=target.container,
                     blob=target.blob_path,
                 )
-                with target.local_path.open("rb") as handle:
-                    self.retry_policy.run(lambda: blob_client.upload_blob(handle, overwrite=self.overwrite))
+                self.retry_policy.run(lambda: _upload_local_file(blob_client, target.local_path, self.overwrite))
                 published[logical_name] = f"azureblob://{target.container}/{target.blob_path}"
             except Exception as exc:
                 failed[logical_name] = str(exc)
@@ -151,6 +150,11 @@ def _sink_result(
     else:
         status = PublishStatus.SUCCEEDED
     return SinkPublishResult(name, status, published=published, failed=failed, manifest_uri=manifest_uri)
+
+
+def _upload_local_file(blob_client, local_path: Path, overwrite: bool) -> None:
+    with local_path.open("rb") as handle:
+        blob_client.upload_blob(handle, overwrite=overwrite)
 
 
 def _manifest_uri(run_result: RunResult) -> str:

@@ -13,7 +13,7 @@ REPO_ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(REPO_ROOT))
 sys.path.insert(0, str(REPO_ROOT / "src"))
 
-from pricing_mlops.artifacts import ArtifactLayout, AzureBlobArtifactSink, RunPartition
+from pricing_mlops.artifacts import ArtifactLayout, AzureBlobArtifactSink, PublishingConfig, RunPartition
 from pricing_mlops.run import run_local_flow
 
 
@@ -66,12 +66,13 @@ def main() -> int:
             os.getenv("INPUT_BLOB_PATH", "samples/sample_pricing_v1.csv"),
         ),
     )
-    parser.add_argument("--curated-container", default=os.getenv("MLOPS_CONTAINER_CURATED", "curated"))
-    parser.add_argument("--runs-container", default=os.getenv("MLOPS_CONTAINER_RUNS", "runs"))
-    parser.add_argument("--snapshots-container", default=os.getenv("MLOPS_CONTAINER_SNAPSHOTS", "snapshots"))
-    parser.add_argument("--drift-logs-container", default=os.getenv("MLOPS_CONTAINER_DRIFT_LOGS", "drift-logs"))
-    parser.add_argument("--reports-container", default=os.getenv("MLOPS_CONTAINER_REPORTS", "reports"))
-    parser.add_argument("--artifacts-container", default=os.getenv("MLOPS_CONTAINER_ARTIFACTS", "artifacts"))
+    publishing_config = PublishingConfig.from_env()
+    parser.add_argument("--curated-container", default=publishing_config.containers["curated"])
+    parser.add_argument("--runs-container", default=publishing_config.containers["runs"])
+    parser.add_argument("--snapshots-container", default=publishing_config.containers["snapshots"])
+    parser.add_argument("--drift-logs-container", default=publishing_config.containers["drift_logs"])
+    parser.add_argument("--reports-container", default=publishing_config.containers["reports"])
+    parser.add_argument("--artifacts-container", default=publishing_config.containers["artifacts"])
     args = parser.parse_args()
 
     if not args.storage_account:

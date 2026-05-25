@@ -1,3 +1,4 @@
+from pricing_mlops.artifacts.config import PublishingConfig, SinkConfig
 from pricing_mlops.artifacts.layout import ArtifactLayout, LayoutPolicy, RunPartition
 from pricing_mlops.artifacts.models import ArtifactManifest, RunArtifact, RunMetadata, RunResult
 from pricing_mlops.artifacts.publishing import (
@@ -25,10 +26,12 @@ __all__ = [
     "LayoutPolicy",
     "PublishResult",
     "PublishStatus",
+    "PublishingConfig",
     "RunArtifact",
     "RunMetadata",
     "RunPartition",
     "RunResult",
     "SinkPublishResult",
+    "SinkConfig",
     "SqlRunMetadataSink",
 ]
