@@ -22,6 +22,7 @@ from pricing_mlops.run import (
     read_csv_records,
     write_csv_records,
 )
+from scripts.components.validate_prepare import run_component as run_validate_prepare
 
 
 def main() -> int:
@@ -31,6 +32,7 @@ def main() -> int:
     parser.add_argument("--output-dir", required=True)
     parser.add_argument("--flow-token", default="")
     parser.add_argument("--storage-account", default="")
+    parser.add_argument("--input-container", default="raw-masked")
     parser.add_argument("--prepared-container", default="")
     parser.add_argument("--prepared-prefix", default="")
     parser.add_argument("--run-artifacts-container", default="")
@@ -52,6 +54,7 @@ def main() -> int:
             output_dir=Path(args.output_dir),
             flow_token=Path(args.flow_token) if args.flow_token else None,
             storage_account=args.storage_account,
+            input_container=args.input_container,
             prepared_container=args.prepared_container,
             prepared_prefix=args.prepared_prefix,
             run_artifacts_container=args.run_artifacts_container,
@@ -82,6 +85,7 @@ def run_component(
     validation_token: Path | None = None,
     flow_token: Path | None = None,
     storage_account: str = "",
+    input_container: str = "raw-masked",
     prepared_container: str = "",
     prepared_prefix: str = "",
     run_artifacts_container: str = "",
@@ -94,12 +98,13 @@ def run_component(
     _require_flow_token(validation_token, "validate_prepare")
     if prepared_dir is None:
         prepared_dir = output_dir / "_prepared"
-        _download_prefix(
+        _ensure_prepared_artifacts(
             storage_account=storage_account,
-            container=prepared_container,
-            blob_prefix=prepared_prefix,
+            input_container=input_container,
+            input_blob_path=input_blob_path,
+            prepared_container=prepared_container,
+            prepared_prefix=prepared_prefix,
             destination=prepared_dir,
-            filenames=["curated_input.csv", "validation_metadata.json"],
         )
     curated = read_csv_records(prepared_dir / "curated_input.csv")
     validation_metadata = json.loads((prepared_dir / "validation_metadata.json").read_text(encoding="utf-8"))
@@ -180,6 +185,7 @@ def _download_prefix(
     blob_prefix: str,
     destination: Path,
     filenames: list[str],
+    attempts: int = 60,
 ) -> None:
     if not storage_account or not container or not blob_prefix:
         raise ValueError("storage account, prepared container and prepared prefix are required without --prepared-dir")
@@ -188,7 +194,38 @@ def _download_prefix(
     prefix = blob_prefix.strip("/")
     for filename in filenames:
         blob = blob_service.get_blob_client(container=container, blob=f"{prefix}/{filename}")
-        (destination / filename).write_bytes(_download_with_retry(blob, f"{prefix}/{filename}"))
+        (destination / filename).write_bytes(_download_with_retry(blob, f"{prefix}/{filename}", attempts=attempts))
+
+
+def _ensure_prepared_artifacts(
+    storage_account: str,
+    input_container: str,
+    input_blob_path: str,
+    prepared_container: str,
+    prepared_prefix: str,
+    destination: Path,
+) -> None:
+    try:
+        _download_prefix(
+            storage_account=storage_account,
+            container=prepared_container,
+            blob_prefix=prepared_prefix,
+            destination=destination,
+            filenames=["curated_input.csv", "validation_metadata.json"],
+            attempts=6,
+        )
+        return
+    except Exception as exc:
+        print(f"prepared artifacts unavailable; rebuilding in score_evaluate: {exc}")
+
+    run_validate_prepare(
+        storage_account=storage_account,
+        input_container=input_container,
+        input_blob_path=input_blob_path,
+        output_dir=destination,
+        prepared_container=prepared_container,
+        prepared_prefix=prepared_prefix,
+    )
 
 
 def _download_with_retry(blob, label: str, attempts: int = 60, delay_seconds: int = 10) -> bytes:

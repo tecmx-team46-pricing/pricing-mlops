@@ -13,6 +13,7 @@ sys.path.insert(0, str(REPO_ROOT))
 sys.path.insert(0, str(REPO_ROOT / "src"))
 
 from scripts.run_azure_storage_flow import build_azure_credential
+from scripts.components.score_evaluate import run_component as run_score_evaluate
 from scripts.upload_run_outputs import build_upload_plan
 
 
@@ -25,8 +26,14 @@ def main() -> int:
     parser.add_argument("--run-artifacts-prefix", default="")
     parser.add_argument("--environment", required=True)
     parser.add_argument("--run-owner", required=True)
+    parser.add_argument("--run-id", required=True)
+    parser.add_argument("--input-container", default="raw-masked")
+    parser.add_argument("--input-blob-path", required=True)
     parser.add_argument("--compute-target", default="azure-ml")
     parser.add_argument("--trigger-type", default="manual")
+    parser.add_argument("--model-repo", default="")
+    parser.add_argument("--model-ref", default="")
+    parser.add_argument("--model-commit-sha", default="")
     parser.add_argument("--curated-container", default="curated")
     parser.add_argument("--runs-container", default="runs")
     parser.add_argument("--snapshots-container", default="snapshots")
@@ -44,8 +51,14 @@ def main() -> int:
             run_artifacts_prefix=args.run_artifacts_prefix,
             environment=args.environment,
             run_owner=args.run_owner,
+            run_id=args.run_id,
+            input_container=args.input_container,
+            input_blob_path=args.input_blob_path,
             compute_target=args.compute_target,
             trigger_type=args.trigger_type,
+            model_repo=args.model_repo,
+            model_ref=args.model_ref,
+            model_commit_sha=args.model_commit_sha,
             containers={
                 "curated": args.curated_container,
                 "runs": args.runs_container,
@@ -72,6 +85,12 @@ def publish_component_outputs(
     score_token: Path | None = None,
     run_artifacts_container: str = "",
     run_artifacts_prefix: str = "",
+    run_id: str = "",
+    input_container: str = "raw-masked",
+    input_blob_path: str = "",
+    model_repo: str = "",
+    model_ref: str = "",
+    model_commit_sha: str = "",
 ) -> dict[str, str]:
     from azure.storage.blob import BlobServiceClient
 
@@ -85,11 +104,18 @@ def publish_component_outputs(
                 run_dir=Path(tmpdir),
                 run_artifacts_container=run_artifacts_container,
                 run_artifacts_prefix=run_artifacts_prefix,
+                storage_account=storage_account,
                 environment=environment,
                 run_owner=run_owner,
+                run_id=run_id,
+                input_container=input_container,
+                input_blob_path=input_blob_path,
                 compute_target=compute_target,
                 trigger_type=trigger_type,
                 containers=containers,
+                model_repo=model_repo,
+                model_ref=model_ref,
+                model_commit_sha=model_commit_sha,
             )
     return _publish_from_dir(
         blob_service=blob_service,
@@ -119,11 +145,18 @@ def _download_and_publish(
     run_dir: Path,
     run_artifacts_container: str,
     run_artifacts_prefix: str,
+    storage_account: str,
     environment: str,
     run_owner: str,
+    run_id: str,
+    input_container: str,
+    input_blob_path: str,
     compute_target: str,
     trigger_type: str,
     containers: dict[str, str],
+    model_repo: str,
+    model_ref: str,
+    model_commit_sha: str,
 ) -> dict[str, str]:
     if not run_artifacts_container or not run_artifacts_prefix:
         raise ValueError("run artifacts container and prefix are required without --run-dir")
@@ -137,7 +170,29 @@ def _download_and_publish(
         "report.md",
     ]:
         blob = blob_service.get_blob_client(container=run_artifacts_container, blob=f"{prefix}/{filename}")
-        (run_dir / filename).write_bytes(_download_with_retry(blob, f"{prefix}/{filename}"))
+        try:
+            (run_dir / filename).write_bytes(_download_with_retry(blob, f"{prefix}/{filename}", attempts=6))
+        except Exception as exc:
+            print(f"run artifacts unavailable; rebuilding in publish_outputs: {exc}")
+            run_score_evaluate(
+                prepared_dir=None,
+                output_dir=run_dir,
+                environment=environment,
+                run_owner=run_owner,
+                run_id=run_id,
+                input_blob_path=input_blob_path,
+                trigger_type=trigger_type,
+                storage_account=storage_account,
+                input_container=input_container,
+                prepared_container=run_artifacts_container,
+                prepared_prefix=f"component-state/{run_id}/prepared",
+                run_artifacts_container=run_artifacts_container,
+                run_artifacts_prefix=run_artifacts_prefix,
+                model_repo=model_repo,
+                model_ref=model_ref,
+                model_commit_sha=model_commit_sha,
+            )
+            break
     return _publish_from_dir(
         blob_service=blob_service,
         run_dir=run_dir,
