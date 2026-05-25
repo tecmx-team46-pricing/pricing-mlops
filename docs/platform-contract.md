@@ -82,6 +82,11 @@ Layout Azure:
 
 Azure ML genera artifacts internos como snapshots de codigo, environments, logs y job artifacts runtime. Esos blobs no son outputs funcionales del modelo y viven en el Storage runtime administrado por plataforma para el workspace activo.
 
+La construccion de metadata, manifest y publicacion esta documentada en
+`docs/artifact-publishing-contract.md`. La logica ML produce un `RunResult`
+neutral; los destinos como Azure Blob, Azure ML y SQL se resuelven mediante
+sinks de infraestructura.
+
 ## Seguridad
 
 - No account keys ni connection strings.

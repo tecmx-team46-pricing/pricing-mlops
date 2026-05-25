@@ -10,6 +10,9 @@ import subprocess
 import sys
 from typing import Callable
 
+from pricing_mlops.artifacts import ArtifactLayout, AzureBlobArtifactSink, RunMetadata, RunPartition, RunResult
+from pricing_mlops.artifacts.layout import manifest_from_run_dir
+
 
 @dataclass(frozen=True)
 class UploadTarget:
@@ -122,68 +125,111 @@ def build_upload_plan(
     resolved_run_dir = Path(run_dir)
     if not resolved_run_dir.exists():
         raise FileNotFoundError(f"run directory not found: {resolved_run_dir}")
-
-    container_map = containers or {
-        "runs": "runs",
-        "curated": "curated",
-        "snapshots": "snapshots",
-        "drift_logs": "drift-logs",
-        "reports": "reports",
-        "artifacts": "artifacts",
-    }
     run_id = _run_id_from_log(resolved_run_dir)
-    run_date = run_id[:8] if len(run_id) >= 8 else "unknown"
-    prefix_parts = [f"environment={environment}"]
-    if compute_target:
-        prefix_parts.append(f"compute={compute_target}")
-    if trigger_type:
-        prefix_parts.append(f"trigger={trigger_type}")
-    prefix_parts.extend(
-        [
-            f"owner={run_owner}",
-            f"run_date={run_date}",
-            f"run_id={run_id}",
-        ]
+    manifest = manifest_from_run_dir(resolved_run_dir, run_id)
+    for artifact in manifest.artifacts:
+        if not artifact.local_path.exists():
+            raise FileNotFoundError(f"required run artifact not found: {artifact.local_path}")
+    layout = ArtifactLayout.default(containers)
+    targets = layout.blob_targets(
+        manifest,
+        RunPartition(
+            environment=environment,
+            owner=run_owner,
+            compute_target=compute_target,
+            trigger_type=trigger_type,
+            run_id=run_id,
+        ),
     )
-    prefix = "/".join(prefix_parts)
-
-    files = {
-        "curated": "curated_pricing.csv",
-        "runs": "model_run_log.json",
-        "snapshots": "model_output_snapshot.csv",
-        "drift-logs": "model_drift_log.json",
-        "reports": "report.md",
-        "artifacts": "curated_pricing.csv",
-    }
-    mapped_containers = {
-        "curated": container_map["curated"],
-        "runs": container_map["runs"],
-        "snapshots": container_map["snapshots"],
-        "drift-logs": container_map["drift_logs"],
-        "reports": container_map["reports"],
-        "artifacts": container_map["artifacts"],
-    }
-
-    plan: dict[str, UploadTarget] = {}
-    for logical_container, filename in files.items():
-        source = resolved_run_dir / filename
-        if not source.exists():
-            raise FileNotFoundError(f"required run artifact not found: {source}")
-        plan[logical_container] = UploadTarget(
-            source=source,
-            container=mapped_containers[logical_container],
-            blob_path=f"{prefix}/{filename}",
+    return {
+        _legacy_plan_key(logical_name): UploadTarget(
+            source=target.local_path,
+            container=target.container,
+            blob_path=target.blob_path,
         )
-    return plan
+        for logical_name, target in targets.items()
+    }
+
+
+def publish_run_outputs_with_blob_sink(
+    run_dir: Path,
+    blob_service,
+    environment: str,
+    run_owner: str,
+    containers: dict[str, str],
+    compute_target: str | None = None,
+    trigger_type: str | None = None,
+):
+    run_log = _run_log(Path(run_dir))
+    metadata = _metadata_from_log(run_log)
+    run_result = RunResult(
+        metadata=metadata,
+        manifest=manifest_from_run_dir(Path(run_dir), metadata.run_id),
+        run_dir=Path(run_dir),
+    )
+    partition = RunPartition(
+        environment=environment,
+        owner=run_owner,
+        run_id=metadata.run_id,
+        compute_target=compute_target,
+        trigger_type=trigger_type,
+    )
+    return AzureBlobArtifactSink(
+        blob_service=blob_service,
+        layout=ArtifactLayout.default(containers),
+        partition=partition,
+    ).publish(run_result)
 
 
 def _run_id_from_log(run_dir: Path) -> str:
+    run_log = _run_log(run_dir)
+    if run_log.get("run_id"):
+        return str(run_log["run_id"])
+    return run_dir.name
+
+
+def _run_log(run_dir: Path) -> dict[str, object]:
     run_log_path = run_dir / "model_run_log.json"
     if run_log_path.exists():
-        run_log = json.loads(run_log_path.read_text())
-        if run_log.get("run_id"):
-            return str(run_log["run_id"])
-    return run_dir.name
+        return json.loads(run_log_path.read_text())
+    return {}
+
+
+def _metadata_from_log(run_log: dict[str, object]) -> RunMetadata:
+    return RunMetadata(
+        run_id=str(run_log["run_id"]),
+        status=str(run_log.get("status", "unknown")),
+        row_count=int(run_log.get("row_count", 0)),
+        validation_status=str(run_log.get("validation_status", "unknown")),
+        drift_status=str(run_log.get("drift_status", "unknown")),
+        started_at_utc=str(run_log.get("started_at_utc", "")),
+        finished_at_utc=str(run_log.get("finished_at_utc", "")),
+        model_version=str(run_log.get("model_version", "")),
+        logic_version=str(run_log.get("logic_version", "")),
+        environment=_optional_str(run_log.get("environment")),
+        owner=_optional_str(run_log.get("owner")),
+        trigger_type=_optional_str(run_log.get("trigger_type")),
+        input_blob_path=_optional_str(run_log.get("input_blob_path")),
+        git_commit_hash=_optional_str(run_log.get("git_commit_hash")),
+        model_repo=_optional_str(run_log.get("model_repo")),
+        model_ref=_optional_str(run_log.get("model_ref")),
+        model_commit_sha=_optional_str(run_log.get("model_commit_sha")),
+    )
+
+
+def _legacy_plan_key(logical_name: str) -> str:
+    return {
+        "curated_dataset": "curated",
+        "curated_artifact": "artifacts",
+        "model_run_log": "runs",
+        "model_output_snapshot": "snapshots",
+        "model_drift_log": "drift-logs",
+        "report": "reports",
+    }[logical_name]
+
+
+def _optional_str(value: object) -> str | None:
+    return str(value) if value is not None else None
 
 
 def _run_command(command: list[str]) -> None:

@@ -13,8 +13,8 @@ REPO_ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(REPO_ROOT))
 sys.path.insert(0, str(REPO_ROOT / "src"))
 
+from pricing_mlops.artifacts import ArtifactLayout, AzureBlobArtifactSink, RunPartition
 from pricing_mlops.run import run_local_flow
-from scripts.upload_run_outputs import build_upload_plan
 
 
 @dataclass(frozen=True)
@@ -185,30 +185,27 @@ def _run_and_upload(
     )
     print(f"azure flow run: run_id={result.run_id} run_dir={result.run_dir}")
 
-    plan = build_upload_plan(
-        run_dir=result.run_dir,
-        environment=request.environment,
-        run_owner=request.run_owner,
-        compute_target=request.compute_target,
-        trigger_type=request.trigger_type,
-        containers=request.containers,
-    )
-
-    uploaded_blobs: dict[str, str] = {}
-    for target in plan.values():
-        print(
-            "azure flow upload plan: "
-            f"container={target.container} "
-            f"blob_path={target.blob_path} "
-            f"source={target.source.name}"
-        )
-        output_blob = blob_service.get_blob_client(
-            container=target.container,
-            blob=target.blob_path,
-        )
-        with target.source.open("rb") as handle:
-            output_blob.upload_blob(handle, overwrite=True)
-        uploaded_blobs[target.container] = target.blob_path
+    if result.run_result is None:
+        raise RuntimeError("run_local_flow did not return a neutral RunResult")
+    publish_result = AzureBlobArtifactSink(
+        blob_service=blob_service,
+        layout=ArtifactLayout.default(request.containers),
+        partition=RunPartition(
+            environment=request.environment,
+            owner=request.run_owner,
+            compute_target=request.compute_target,
+            trigger_type=request.trigger_type,
+            run_id=result.run_id,
+        ),
+    ).publish(result.run_result)
+    if not publish_result.ok:
+        raise RuntimeError(f"Azure Blob publish failed: {publish_result}")
+    uploaded_blobs = {
+        published_uri.removeprefix("azureblob://").split("/", 1)[0]: published_uri.removeprefix("azureblob://").split("/", 1)[1]
+        for sink in publish_result.sinks
+        for published_uri in sink.published.values()
+        if published_uri.startswith("azureblob://")
+    }
     return result, uploaded_blobs
 
 

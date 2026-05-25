@@ -9,6 +9,8 @@ import subprocess
 from uuid import uuid4
 
 from pricing_mlops.drift import evaluate_drift
+from pricing_mlops.artifacts.layout import manifest_from_run_dir
+from pricing_mlops.artifacts.models import RunMetadata, RunResult
 from pricing_mlops.modeling.predict import score_pricing
 from pricing_mlops.validation import validate_pricing_input
 
@@ -21,6 +23,7 @@ class LocalFlowResult:
     run_id: str
     run_dir: Path
     row_count: int
+    run_result: RunResult | None = None
 
 
 def run_local_flow(
@@ -53,35 +56,40 @@ def run_local_flow(
     drift_path.write_text(json.dumps(drift, indent=2, sort_keys=True) + "\n")
     finished_at = datetime.now(timezone.utc)
 
-    run_log = {
-        "run_id": run_id,
-        "status": "succeeded",
-        "input_path": str(source_path),
-        "output_path": str(run_dir),
-        "row_count": validation.row_count,
-        "validation_status": validation.status,
-        "drift_status": drift["status"],
-        "started_at_utc": started_at.isoformat(),
-        "finished_at_utc": finished_at.isoformat(),
-        "dataset_version": "local-sample",
-        "schema_version": "pricing_input_schema_v1",
-        "model_version": MODEL_VERSION,
-        "logic_version": LOGIC_VERSION,
-        "config_version": "pricing_rules_config_v1",
-        "git_commit_hash": git_commit_hash(),
-        "artifacts": {
+    metadata = RunMetadata(
+        run_id=run_id,
+        status="succeeded",
+        row_count=validation.row_count,
+        validation_status=validation.status,
+        drift_status=str(drift["status"]),
+        started_at_utc=started_at.isoformat(),
+        finished_at_utc=finished_at.isoformat(),
+        model_version=MODEL_VERSION,
+        logic_version=LOGIC_VERSION,
+        git_commit_hash=git_commit_hash(),
+    )
+    if run_metadata:
+        metadata = _metadata_with_runtime_values(metadata, run_metadata)
+    manifest = manifest_from_run_dir(run_dir, run_id)
+    run_log = metadata.to_log_dict(
+        output_path=str(run_dir),
+        artifacts={
             "curated_dataset": curated_path.name,
             "model_output_snapshot": snapshot_path.name,
             "model_drift_log": drift_path.name,
             "report": report_path.name,
         },
-    }
-    if run_metadata:
-        run_log.update(run_metadata)
+    )
+    run_log["input_path"] = str(source_path)
     run_log_path.write_text(json.dumps(run_log, indent=2, sort_keys=True) + "\n")
     report_path.write_text(_render_report(run_log, drift))
 
-    return LocalFlowResult(run_id=run_id, run_dir=run_dir, row_count=validation.row_count)
+    return LocalFlowResult(
+        run_id=run_id,
+        run_dir=run_dir,
+        row_count=validation.row_count,
+        run_result=RunResult(metadata=metadata, manifest=manifest, run_dir=run_dir),
+    )
 
 
 def generate_run_id() -> str:
@@ -180,3 +188,31 @@ def _decision_for_status(status: str) -> str:
     if status == "yellow":
         return "yellow - review before promoting"
     return "green - continue"
+
+
+def _metadata_with_runtime_values(metadata: RunMetadata, values: dict[str, str]) -> RunMetadata:
+    known_fields = {
+        "environment",
+        "owner",
+        "trigger_type",
+        "input_blob_path",
+        "model_repo",
+        "model_ref",
+        "model_commit_sha",
+    }
+    kwargs = {key: values[key] for key in known_fields if key in values}
+    extra = {key: value for key, value in values.items() if key not in known_fields}
+    return RunMetadata(
+        run_id=metadata.run_id,
+        status=metadata.status,
+        row_count=metadata.row_count,
+        validation_status=metadata.validation_status,
+        drift_status=metadata.drift_status,
+        started_at_utc=metadata.started_at_utc,
+        finished_at_utc=metadata.finished_at_utc,
+        model_version=metadata.model_version,
+        logic_version=metadata.logic_version,
+        git_commit_hash=metadata.git_commit_hash,
+        extra=extra,
+        **kwargs,
+    )

@@ -14,7 +14,7 @@ sys.path.insert(0, str(REPO_ROOT / "src"))
 
 from scripts.run_azure_storage_flow import build_azure_credential
 from scripts.components.score_evaluate import run_component as run_score_evaluate
-from scripts.upload_run_outputs import build_upload_plan
+from scripts.upload_run_outputs import publish_run_outputs_with_blob_sink
 
 
 def main() -> int:
@@ -225,28 +225,21 @@ def _publish_from_dir(
     trigger_type: str,
     containers: dict[str, str],
 ) -> dict[str, str]:
-    plan = build_upload_plan(
+    result = publish_run_outputs_with_blob_sink(
         run_dir=run_dir,
+        blob_service=blob_service,
         environment=environment,
         run_owner=run_owner,
         compute_target=compute_target,
         trigger_type=trigger_type,
         containers=containers,
     )
-
-    uploaded_blobs: dict[str, str] = {}
-    for target in plan.values():
-        print(
-            "component publish: "
-            f"container={target.container} "
-            f"blob_path={target.blob_path} "
-            f"source={target.source.name}"
-        )
-        blob = blob_service.get_blob_client(container=target.container, blob=target.blob_path)
-        with target.source.open("rb") as handle:
-            blob.upload_blob(handle, overwrite=True)
-        uploaded_blobs[target.container] = target.blob_path
-    return uploaded_blobs
+    if not result.ok:
+        raise RuntimeError(f"component publish failed: {result}")
+    return {
+        uri.removeprefix("azureblob://").split("/", 1)[0]: uri.removeprefix("azureblob://").split("/", 1)[1]
+        for uri in result.published.values()
+    }
 
 
 if __name__ == "__main__":
