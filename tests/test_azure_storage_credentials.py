@@ -19,6 +19,16 @@ def test_build_azure_credential_still_uses_obo_inside_aml_with_client_id(monkeyp
     assert credential.__class__.__name__ == "AzureMLOnBehalfOfCredential"
 
 
+def test_build_azure_credential_uses_managed_identity_when_requested(monkeypatch):
+    monkeypatch.setenv("AZUREML_RUN_ID", "aml-run")
+    monkeypatch.setenv("AZURE_ML_JOB_IDENTITY_CLIENT_ID", "managed-client-id")
+    monkeypatch.setenv("MLOPS_USE_MANAGED_IDENTITY_CREDENTIAL", "true")
+
+    credential = build_azure_credential()
+
+    assert credential.__class__.__name__ == "ManagedIdentityCredential"
+
+
 def test_build_azure_credential_can_force_default_credential(monkeypatch):
     monkeypatch.setenv("AZUREML_RUN_ID", "aml-run")
     monkeypatch.setenv("AZURE_CLIENT_ID", "managed-client-id")

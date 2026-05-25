@@ -13,7 +13,8 @@ sys.path.insert(0, str(REPO_ROOT))
 sys.path.insert(0, str(REPO_ROOT / "src"))
 
 from pricing_mlops.drift import evaluate_drift
-from pricing_mlops.artifacts import RunMetadata
+from pricing_mlops.artifact_publishing import RunMetadata
+from pricing_mlops.artifact_publishing.layout import ComponentStateLayout, PREPARED_FILES
 from pricing_mlops.modeling.predict import score_pricing
 from pricing_mlops.run import (
     LOGIC_VERSION,
@@ -107,8 +108,8 @@ def run_component(
             prepared_prefix=prepared_prefix,
             destination=prepared_dir,
         )
-    curated = read_csv_records(prepared_dir / "curated_input.csv")
-    validation_metadata = json.loads((prepared_dir / "validation_metadata.json").read_text(encoding="utf-8"))
+    curated = read_csv_records(prepared_dir / PREPARED_FILES["curated_input"])
+    validation_metadata = json.loads((prepared_dir / PREPARED_FILES["validation_metadata"]).read_text(encoding="utf-8"))
 
     started_at = datetime.now(timezone.utc)
     scored = score_pricing(curated)
@@ -153,7 +154,7 @@ def run_component(
             "report": report_path.name,
         },
     )
-    run_log["input_path"] = str(prepared_dir / "curated_input.csv")
+    run_log["input_path"] = str(prepared_dir / PREPARED_FILES["curated_input"])
 
     run_log_path.write_text(json.dumps(run_log, indent=2, sort_keys=True) + "\n", encoding="utf-8")
     report_path.write_text(_render_report(run_log, drift), encoding="utf-8")
@@ -208,7 +209,7 @@ def _ensure_prepared_artifacts(
             container=prepared_container,
             blob_prefix=prepared_prefix,
             destination=destination,
-            filenames=["curated_input.csv", "validation_metadata.json"],
+            filenames=list(ComponentStateLayout().prepared_filenames()),
             attempts=6,
         )
         return

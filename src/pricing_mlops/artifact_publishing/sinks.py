@@ -6,10 +6,10 @@ from pathlib import Path
 import shutil
 from typing import Any
 
-from pricing_mlops.artifacts.layout import ArtifactLayout, RunPartition
-from pricing_mlops.artifacts.models import RunResult
-from pricing_mlops.artifacts.publishing import PublishStatus, SinkPublishResult
-from pricing_mlops.artifacts.retry import RetryPolicy
+from pricing_mlops.artifact_publishing.layout import ArtifactLayout, RunPartition
+from pricing_mlops.artifact_publishing.models import RunResult
+from pricing_mlops.artifact_publishing.publishing import PublishStatus, SinkPublishResult
+from pricing_mlops.artifact_publishing.retry import RetryPolicy
 
 
 @dataclass(frozen=True)
@@ -67,6 +67,7 @@ class AzureBlobArtifactSink:
 @dataclass(frozen=True)
 class AzureMlArtifactSink:
     tracking_client: Any
+    retry_policy: RetryPolicy = RetryPolicy()
     required: bool = False
     name: str = "azure_ml"
 
@@ -87,13 +88,8 @@ class AzureMlArtifactSink:
             "model_commit_sha": metadata.model_commit_sha,
         }
         try:
-            for key, value in tags.items():
-                if value is not None:
-                    self.tracking_client.set_tag(key, value)
-            self.tracking_client.log_metric("row_count", metadata.row_count)
-            for artifact in run_result.manifest.artifacts:
-                self.tracking_client.set_tag(f"artifact.{artifact.logical_name}", artifact.filename)
-                published[artifact.logical_name] = artifact.filename
+            self.retry_policy.run(lambda: _publish_azure_ml_metadata(self.tracking_client, tags, run_result))
+            published = {artifact.logical_name: artifact.filename for artifact in run_result.manifest.artifacts}
         except Exception as exc:
             failed["azure_ml"] = str(exc)
         return _sink_result(self.name, published, failed)
@@ -103,6 +99,7 @@ class AzureMlArtifactSink:
 class SqlRunMetadataSink:
     connection: Any
     table_name: str = "pricing_run_metadata"
+    retry_policy: RetryPolicy = RetryPolicy()
     required: bool = False
     name: str = "sql_metadata"
 
@@ -125,8 +122,7 @@ class SqlRunMetadataSink:
             "publish_status": publish_status,
         }
         try:
-            self.connection.execute(_upsert_sql(self.table_name), payload)
-            self.connection.commit()
+            self.retry_policy.run(lambda: _upsert_metadata(self.connection, self.table_name, payload))
         except Exception as exc:
             return SinkPublishResult(self.name, PublishStatus.FAILED, failed={"sql": str(exc)})
         return SinkPublishResult(
@@ -155,6 +151,20 @@ def _sink_result(
 def _upload_local_file(blob_client, local_path: Path, overwrite: bool) -> None:
     with local_path.open("rb") as handle:
         blob_client.upload_blob(handle, overwrite=overwrite)
+
+
+def _publish_azure_ml_metadata(tracking_client, tags: dict[str, object], run_result: RunResult) -> None:
+    for key, value in tags.items():
+        if value is not None:
+            tracking_client.set_tag(key, value)
+    tracking_client.log_metric("row_count", run_result.metadata.row_count)
+    for artifact in run_result.manifest.artifacts:
+        tracking_client.set_tag(f"artifact.{artifact.logical_name}", artifact.filename)
+
+
+def _upsert_metadata(connection, table_name: str, payload: dict[str, object]) -> None:
+    connection.execute(_upsert_sql(table_name), payload)
+    connection.commit()
 
 
 def _manifest_uri(run_result: RunResult) -> str:

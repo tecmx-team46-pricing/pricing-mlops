@@ -12,6 +12,7 @@ sys.path.insert(0, str(REPO_ROOT / "src"))
 
 from pricing_mlops.run import curate_pricing_records, read_csv_records, write_csv_records
 from pricing_mlops.validation import validate_pricing_input
+from pricing_mlops.artifact_publishing.layout import PREPARED_FILES
 from scripts.run_azure_storage_flow import build_azure_credential
 
 
@@ -65,7 +66,10 @@ def run_component(
             storage_account=storage_account,
             container=prepared_container,
             blob_prefix=prepared_prefix,
-            files=[output_dir / "curated_input.csv", output_dir / "validation_metadata.json"],
+            files=[
+                output_dir / PREPARED_FILES["curated_input"],
+                output_dir / PREPARED_FILES["validation_metadata"],
+            ],
         )
     _write_flow_token(flow_token, {"stage": "validate_prepare", "input_blob_path": input_blob_path})
 
@@ -76,8 +80,8 @@ def prepare_local_input(input_path: Path, output_dir: Path, input_blob_path: str
     validation = validate_pricing_input(rows)
     curated = curate_pricing_records(rows)
 
-    write_csv_records(output_dir / "curated_input.csv", curated)
-    (output_dir / "validation_metadata.json").write_text(
+    write_csv_records(output_dir / PREPARED_FILES["curated_input"], curated)
+    (output_dir / PREPARED_FILES["validation_metadata"]).write_text(
         json.dumps(
             {
                 "input_blob_path": input_blob_path,

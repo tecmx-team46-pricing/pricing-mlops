@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import sqlite3
 
-from pricing_mlops.artifacts import (
+from pricing_mlops.artifact_publishing import (
     ArtifactLayout,
     AzureBlobArtifactSink,
     AzureMlArtifactSink,
@@ -13,7 +13,8 @@ from pricing_mlops.artifacts import (
     RunResult,
     SqlRunMetadataSink,
 )
-from pricing_mlops.artifacts.layout import manifest_from_run_dir
+from pricing_mlops.artifact_publishing.layout import manifest_from_run_dir
+from pricing_mlops.artifact_publishing.retry import RetryPolicy
 
 
 def test_local_artifact_sink_is_idempotent_for_same_run_id(tmp_path):
@@ -51,6 +52,28 @@ def test_azure_blob_sink_uploads_current_layout_with_overwrite(tmp_path):
     assert any(upload["container"] == "runs" and upload["blob"].endswith("model_run_log.json") for upload in blob_service.uploads)
 
 
+def test_azure_blob_sink_retries_transient_upload_failure(tmp_path):
+    run_result = _run_result(tmp_path)
+    blob_service = _FlakyBlobService()
+    sink = AzureBlobArtifactSink(
+        blob_service=blob_service,
+        layout=ArtifactLayout.default(),
+        partition=RunPartition(
+            environment="staging",
+            compute_target="azure-ml",
+            trigger_type="manual",
+            owner="team46",
+            run_id=run_result.run_id,
+        ),
+        retry_policy=RetryPolicy(attempts=2, delay_seconds=0),
+    )
+
+    result = sink.publish(run_result)
+
+    assert result.status == PublishStatus.SUCCEEDED
+    assert blob_service.attempts["curated/curated_pricing.csv"] == 2
+
+
 def test_azure_ml_sink_records_metadata_and_artifact_references(tmp_path):
     run_result = _run_result(tmp_path)
     tracker = _FakeTracker()
@@ -61,6 +84,20 @@ def test_azure_ml_sink_records_metadata_and_artifact_references(tmp_path):
     assert tracker.tags["run_id"] == run_result.run_id
     assert tracker.metrics["row_count"] == 1
     assert tracker.tags["artifact.model_run_log"] == "model_run_log.json"
+
+
+def test_azure_ml_sink_retries_transient_tracking_failure(tmp_path):
+    run_result = _run_result(tmp_path)
+    tracker = _FlakyTracker()
+
+    result = AzureMlArtifactSink(
+        tracking_client=tracker,
+        retry_policy=RetryPolicy(attempts=2, delay_seconds=0),
+    ).publish(run_result)
+
+    assert result.status == PublishStatus.SUCCEEDED
+    assert tracker.failures == 1
+    assert tracker.tags["run_id"] == run_result.run_id
 
 
 def test_sql_run_metadata_sink_upserts_metadata(tmp_path):
@@ -97,6 +134,38 @@ def test_sql_run_metadata_sink_upserts_metadata(tmp_path):
     assert row == (run_result.run_id, "staging", 1)
 
 
+def test_sql_run_metadata_sink_retries_transient_upsert_failure(tmp_path):
+    run_result = _run_result(tmp_path)
+    connection = _FlakyConnection(sqlite3.connect(":memory:"))
+    connection.execute(
+        """
+        create table pricing_run_metadata (
+            run_id text primary key,
+            environment text,
+            owner text,
+            status text,
+            row_count integer,
+            drift_status text,
+            started_at_utc text,
+            finished_at_utc text,
+            model_version text,
+            input_blob_path text,
+            artifact_manifest_uri text,
+            publish_status text
+        )
+        """
+    )
+    sink = SqlRunMetadataSink(
+        connection=connection,
+        retry_policy=RetryPolicy(attempts=2, delay_seconds=0),
+    )
+
+    result = sink.publish(run_result)
+
+    assert result.status == PublishStatus.SUCCEEDED
+    assert connection.failures == 1
+
+
 class _FakeBlobService:
     def __init__(self):
         self.uploads = []
@@ -122,6 +191,30 @@ class _FakeBlobClient:
         )
 
 
+class ServiceRequestError(Exception):
+    pass
+
+
+class _FlakyBlobService:
+    def __init__(self):
+        self.attempts = {}
+
+    def get_blob_client(self, container: str, blob: str):
+        return _FlakyBlobClient(self.attempts, container, blob)
+
+
+class _FlakyBlobClient:
+    def __init__(self, attempts, container: str, blob: str):
+        self._attempts = attempts
+        self._key = f"{container}/{blob.rsplit('/', 1)[-1]}"
+
+    def upload_blob(self, handle, overwrite: bool):
+        self._attempts[self._key] = self._attempts.get(self._key, 0) + 1
+        if self._attempts[self._key] == 1:
+            raise ServiceRequestError("temporary outage")
+        handle.read()
+
+
 class _FakeTracker:
     def __init__(self):
         self.tags = {}
@@ -132,6 +225,34 @@ class _FakeTracker:
 
     def log_metric(self, key, value):
         self.metrics[key] = value
+
+
+class _FlakyTracker(_FakeTracker):
+    def __init__(self):
+        super().__init__()
+        self.failures = 0
+
+    def set_tag(self, key, value):
+        if self.failures == 0:
+            self.failures += 1
+            raise ServiceRequestError("temporary tracking outage")
+        super().set_tag(key, value)
+
+
+class _FlakyConnection:
+    def __init__(self, connection):
+        self._connection = connection
+        self.failures = 0
+
+    def execute(self, *args, **kwargs):
+        statement = str(args[0]).strip().lower()
+        if statement.startswith("insert") and self.failures == 0:
+            self.failures += 1
+            raise ServiceRequestError("temporary sql outage")
+        return self._connection.execute(*args, **kwargs)
+
+    def commit(self):
+        return self._connection.commit()
 
 
 def _run_result(tmp_path) -> RunResult:

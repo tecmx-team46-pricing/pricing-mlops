@@ -3,7 +3,7 @@
 ## Ownership
 
 `pricing_mlops.run` owns ML execution and produces a neutral `RunResult`.
-Publishing is owned by `pricing_mlops.artifacts`.
+Publishing is owned by `pricing_mlops.artifact_publishing`.
 
 Domain code must not import Azure, SQL, cloud SDKs, account keys, connection strings, or platform paths. Infrastructure integrations live behind artifact sinks.
 
@@ -37,6 +37,15 @@ report.md
 ```
 
 The same `curated_pricing.csv` is published to both `curated` and `artifacts` for compatibility with the existing platform contract.
+
+`ComponentStateLayout` owns the intermediate Azure ML component-state prefixes used by `validate_prepare`, `score_evaluate`, and `publish_outputs`:
+
+```text
+artifacts/component-state/<run_id>/prepared/
+artifacts/component-state/<run_id>/run_artifacts/
+```
+
+Those intermediate files are not the final publication contract; they exist only to make multi-component AML execution restartable and idempotent.
 
 ## Publishing
 
@@ -87,7 +96,7 @@ Each sink reports published and failed artifact keys. Callers must inspect `Publ
 
 ## Retry
 
-`RetryPolicy` wraps transient sink operations. The default policy retries common Azure SDK transport/timeout error classes and does not retry definitive validation or contract errors.
+`RetryPolicy` wraps transient sink operations for Azure Blob, Azure ML tracking, and SQL metadata upsert. The default policy retries common Azure SDK transport/timeout error classes and does not retry definitive validation or contract errors.
 
 Each retry opens the source file again before uploading, so a partially consumed stream is not reused after a transient upload failure.
 

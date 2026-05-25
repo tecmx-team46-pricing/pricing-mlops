@@ -1,4 +1,4 @@
-from pricing_mlops.artifacts import PublishingConfig
+from pricing_mlops.artifact_publishing import PublishingConfig
 
 
 def test_publishing_config_defaults_to_required_azure_blob(monkeypatch):

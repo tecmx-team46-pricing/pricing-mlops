@@ -15,7 +15,7 @@ sys.path.insert(0, str(REPO_ROOT / "src"))
 from scripts.run_azure_storage_flow import build_azure_credential
 from scripts.components.score_evaluate import run_component as run_score_evaluate
 from scripts.upload_run_outputs import publish_run_outputs_with_blob_sink
-from pricing_mlops.artifacts import PublishingConfig
+from pricing_mlops.artifact_publishing import ComponentStateLayout, PublishingConfig
 
 
 def main() -> int:
@@ -187,7 +187,7 @@ def _download_and_publish(
                 storage_account=storage_account,
                 input_container=input_container,
                 prepared_container=run_artifacts_container,
-                prepared_prefix=f"component-state/{run_id}/prepared",
+                prepared_prefix=ComponentStateLayout().prepared_prefix(run_id),
                 run_artifacts_container=run_artifacts_container,
                 run_artifacts_prefix=run_artifacts_prefix,
                 model_repo=model_repo,

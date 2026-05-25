@@ -9,8 +9,8 @@ import subprocess
 from uuid import uuid4
 
 from pricing_mlops.drift import evaluate_drift
-from pricing_mlops.artifacts.layout import manifest_from_run_dir
-from pricing_mlops.artifacts.models import RunMetadata, RunResult
+from pricing_mlops.artifact_publishing.layout import manifest_from_run_dir
+from pricing_mlops.artifact_publishing.models import RunMetadata, RunResult
 from pricing_mlops.modeling.predict import score_pricing
 from pricing_mlops.validation import validate_pricing_input
 

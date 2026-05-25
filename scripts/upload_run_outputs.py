@@ -10,8 +10,8 @@ import subprocess
 import sys
 from typing import Callable
 
-from pricing_mlops.artifacts import ArtifactLayout, AzureBlobArtifactSink, PublishingConfig, RunMetadata, RunPartition, RunResult
-from pricing_mlops.artifacts.layout import manifest_from_run_dir
+from pricing_mlops.artifact_publishing import ArtifactLayout, AzureBlobArtifactSink, PublishingConfig, RunMetadata, RunPartition, RunResult
+from pricing_mlops.artifact_publishing.layout import manifest_from_run_dir
 
 
 @dataclass(frozen=True)

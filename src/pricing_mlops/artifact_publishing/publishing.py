@@ -4,7 +4,7 @@ from dataclasses import dataclass, field
 from enum import Enum
 from typing import Protocol
 
-from pricing_mlops.artifacts.models import RunResult
+from pricing_mlops.artifact_publishing.models import RunResult
 
 
 class PublishStatus(str, Enum):

@@ -3,7 +3,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from pathlib import Path
 
-from pricing_mlops.artifacts.models import ArtifactManifest, RunArtifact, RunMetadata
+from pricing_mlops.artifact_publishing.models import ArtifactManifest, RunArtifact, RunMetadata
 
 
 ARTIFACT_FILES = {
@@ -13,6 +13,30 @@ ARTIFACT_FILES = {
     "model_run_log": "model_run_log.json",
     "report": "report.md",
 }
+
+PREPARED_FILES = {
+    "curated_input": "curated_input.csv",
+    "validation_metadata": "validation_metadata.json",
+}
+
+
+@dataclass(frozen=True)
+class ComponentStateLayout:
+    root_prefix: str = "component-state"
+    prepared_stage: str = "prepared"
+    run_artifacts_stage: str = "run_artifacts"
+
+    def prepared_prefix(self, run_id: str) -> str:
+        return self.stage_prefix(run_id, self.prepared_stage)
+
+    def run_artifacts_prefix(self, run_id: str) -> str:
+        return self.stage_prefix(run_id, self.run_artifacts_stage)
+
+    def stage_prefix(self, run_id: str, stage: str) -> str:
+        return f"{self.root_prefix.strip('/')}/{run_id.strip('/')}/{stage.strip('/')}"
+
+    def prepared_filenames(self) -> tuple[str, ...]:
+        return tuple(PREPARED_FILES.values())
 
 
 @dataclass(frozen=True)

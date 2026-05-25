@@ -13,7 +13,7 @@ REPO_ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(REPO_ROOT))
 sys.path.insert(0, str(REPO_ROOT / "src"))
 
-from pricing_mlops.artifacts import ArtifactLayout, AzureBlobArtifactSink, PublishingConfig, RunPartition
+from pricing_mlops.artifact_publishing import ArtifactLayout, AzureBlobArtifactSink, PublishingConfig, RunPartition
 from pricing_mlops.run import run_local_flow
 
 
@@ -146,6 +146,12 @@ def run_azure_storage_flow(request: AzureStorageFlowRequest) -> AzureStorageFlow
 
 
 def build_azure_credential():
+    if os.getenv("AZUREML_RUN_ID") and os.getenv("MLOPS_USE_MANAGED_IDENTITY_CREDENTIAL", "false").lower() == "true":
+        from azure.identity import ManagedIdentityCredential
+
+        client_id = os.getenv("AZURE_CLIENT_ID") or os.getenv("AZURE_ML_JOB_IDENTITY_CLIENT_ID") or None
+        return ManagedIdentityCredential(client_id=client_id)
+
     if os.getenv("AZUREML_RUN_ID") and os.getenv("MLOPS_FORCE_DEFAULT_CREDENTIAL", "false").lower() != "true":
         try:
             from azure.ai.ml.identity import AzureMLOnBehalfOfCredential
@@ -203,8 +209,7 @@ def _run_and_upload(
         raise RuntimeError(f"Azure Blob publish failed: {publish_result}")
     uploaded_blobs = {
         published_uri.removeprefix("azureblob://").split("/", 1)[0]: published_uri.removeprefix("azureblob://").split("/", 1)[1]
-        for sink in publish_result.sinks
-        for published_uri in sink.published.values()
+        for published_uri in publish_result.published.values()
         if published_uri.startswith("azureblob://")
     }
     return result, uploaded_blobs

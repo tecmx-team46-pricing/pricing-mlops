@@ -2,9 +2,9 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from pricing_mlops.artifacts import ArtifactPublisher, PublishStatus, RunMetadata, RunResult
-from pricing_mlops.artifacts.layout import ArtifactLayout, RunPartition, manifest_from_run_dir
-from pricing_mlops.artifacts.publishing import SinkPublishResult
+from pricing_mlops.artifact_publishing import ArtifactPublisher, ComponentStateLayout, PublishStatus, RunMetadata, RunResult
+from pricing_mlops.artifact_publishing.layout import ArtifactLayout, RunPartition, manifest_from_run_dir
+from pricing_mlops.artifact_publishing.publishing import SinkPublishResult
 
 
 def test_artifact_layout_preserves_existing_blob_partition_and_filenames(tmp_path):
@@ -34,6 +34,16 @@ def test_artifact_layout_preserves_existing_blob_partition_and_filenames(tmp_pat
     assert targets["model_output_snapshot"].blob_path.endswith("model_output_snapshot.csv")
     assert targets["model_drift_log"].blob_path.endswith("model_drift_log.json")
     assert targets["report"].blob_path.endswith("report.md")
+
+
+def test_component_state_layout_centralizes_intermediate_pipeline_paths():
+    layout = ComponentStateLayout()
+
+    assert layout.prepared_prefix("20260525T000000Z-test") == "component-state/20260525T000000Z-test/prepared"
+    assert layout.run_artifacts_prefix("20260525T000000Z-test") == (
+        "component-state/20260525T000000Z-test/run_artifacts"
+    )
+    assert layout.prepared_filenames() == ("curated_input.csv", "validation_metadata.json")
 
 
 def test_publisher_reports_partial_when_optional_sink_fails(tmp_path):
