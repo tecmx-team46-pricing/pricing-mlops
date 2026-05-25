@@ -3,6 +3,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import os
 from pathlib import Path
 import sys
 import tempfile
@@ -14,8 +15,9 @@ sys.path.insert(0, str(REPO_ROOT / "src"))
 
 from scripts.run_azure_storage_flow import build_azure_credential
 from scripts.components.score_evaluate import run_component as run_score_evaluate
-from scripts.upload_run_outputs import publish_run_outputs_with_blob_sink
+from scripts.upload_run_outputs import publish_run_outputs_with_sinks
 from pricing_mlops.artifact_publishing import ComponentStateLayout, PublishingConfig
+from pricing_mlops.artifact_publishing.sql_connection import connect_azure_sql_with_entra_token
 
 
 def main() -> int:
@@ -227,7 +229,9 @@ def _publish_from_dir(
     trigger_type: str,
     containers: dict[str, str],
 ) -> dict[str, str]:
-    result = publish_run_outputs_with_blob_sink(
+    credential = build_azure_credential()
+    sql_connection = _sql_connection(credential)
+    result = publish_run_outputs_with_sinks(
         run_dir=run_dir,
         blob_service=blob_service,
         environment=environment,
@@ -235,13 +239,37 @@ def _publish_from_dir(
         compute_target=compute_target,
         trigger_type=trigger_type,
         containers=containers,
+        sql_connection=sql_connection,
+        sql_dialect="sqlserver",
+        sql_table_name=_sql_table_name("MLOPS_SQL_RUN_LOG_TABLE", "model_run_log"),
+        sql_snapshot_table_name=_sql_table_name("MLOPS_SQL_SNAPSHOT_TABLE", "model_output_snapshot_metadata"),
     )
     if not result.ok:
         raise RuntimeError(f"component publish failed: {result}")
+    blob_result = next((sink for sink in result.sinks if sink.sink_name == "azure_blob"), None)
+    if blob_result is None:
+        return {}
     return {
         uri.removeprefix("azureblob://").split("/", 1)[0]: uri.removeprefix("azureblob://").split("/", 1)[1]
-        for uri in result.published.values()
+        for uri in blob_result.published.values()
     }
+
+
+def _sql_connection(credential):
+    config = PublishingConfig.from_env()
+    if "sql_metadata" not in config.enabled_sink_names():
+        return None
+    if os.getenv("MLOPS_SQL_ENABLED", "false").lower() != "true":
+        if config.is_required("sql_metadata"):
+            raise ValueError("sql_metadata sink is required but MLOPS_SQL_ENABLED is not true")
+        return None
+    return connect_azure_sql_with_entra_token(credential)
+
+
+def _sql_table_name(env_name: str, default: str) -> str:
+    schema = os.getenv("MLOPS_SQL_SCHEMA", "dbo").strip() or "dbo"
+    table = os.getenv(env_name, default).strip() or default
+    return table if "." in table else f"{schema}.{table}"
 
 
 if __name__ == "__main__":

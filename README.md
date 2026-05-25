@@ -23,7 +23,7 @@ Componentes expuestos para Azure ML:
 |---|---|---|
 | `validate_prepare` | `scripts/components/validate_prepare.py` | Descarga el CSV masked, valida y genera curated intermedio. |
 | `score_evaluate` | `scripts/components/score_evaluate.py` | Scorea, evalua drift y genera artefactos locales. |
-| `publish_outputs` | `scripts/components/publish_outputs.py` | Publica los seis outputs funcionales al Storage MLOps. |
+| `publish_outputs` | `scripts/components/publish_outputs.py` | Publica los seis outputs funcionales al Storage MLOps y metadata audit a SQL cuando plataforma lo habilita. |
 
 El flujo automatico lo dispara plataforma con Event Grid sobre `raw-masked/incoming/*.csv`. Este repo no contiene Event Grid, Function App ni IaC.
 
@@ -132,6 +132,15 @@ Artefactos:
 | `curated` | `curated_pricing.csv` |
 
 Estos outputs funcionales se escriben solo en el Storage MLOps publicado por plataforma (`AZURE_STORAGE_ACCOUNT`, hoy `<mlops-storage-account>` en `staging`). Azure ML crea snapshots de codigo, logs, environments y artifacts runtime en el Storage runtime del workspace activo; este repo no los interpreta como outputs del modelo.
+
+## Metadata Audit
+
+La plataforma puede activar `MLOPS_ARTIFACT_SINKS=azure_blob,sql_metadata`. En ese modo este repo sigue generando los mismos artifacts, y `publish_outputs` agrega metadata en Azure SQL:
+
+- `dbo.model_run_log`
+- `dbo.model_output_snapshot_metadata`
+
+SQL es metadata-only. Los CSVs y reportes siguen en Blob Storage. La conexion se hace con Microsoft Entra token desde la identidad administrada del job AML; no se usan account keys ni connection strings.
 
 ## Documentacion
 

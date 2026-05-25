@@ -77,7 +77,7 @@ Publication can be selected by environment variables without changing ML code:
 | `MLOPS_CONTAINER_REPORTS` | `reports` | Report container. |
 | `MLOPS_CONTAINER_ARTIFACTS` | `artifacts` | General artifacts container. |
 
-The current production path enables `azure_blob` only. Azure ML and SQL sinks are implemented as optional fan-out destinations and must be explicitly wired by the caller with the appropriate client/connection.
+The current staging platform path enables `azure_blob,sql_metadata` and keeps `azure_ml` optional. The SQL sink is wired by the Azure ML `publish_outputs` component using Microsoft Entra token auth from the managed identity; local callers must still inject an explicit connection if they enable it.
 
 ## Implemented Sinks
 
@@ -86,7 +86,7 @@ The current production path enables `azure_blob` only. Azure ML and SQL sinks ar
 | `LocalArtifactSink` | Development and tests; copies artifacts to a local run folder and overwrites idempotently. |
 | `AzureBlobArtifactSink` | Functional output publication to Storage Blob using identity-based SDK clients and overwrite semantics. |
 | `AzureMlArtifactSink` | First scoped AML integration: records tags, row-count metric, and artifact references only. It does not store business artifacts in AML. |
-| `SqlRunMetadataSink` | Metadata upsert for queryable run history. It stores run metadata and manifest reference, not large files. |
+| `SqlRunMetadataSink` | Metadata upsert for queryable run history in `model_run_log` and `model_output_snapshot_metadata`. It stores metadata and artifact references, not large files. |
 
 ## Idempotency And Partial Failure
 

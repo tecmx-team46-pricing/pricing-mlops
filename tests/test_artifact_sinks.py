@@ -117,11 +117,20 @@ def test_sql_run_metadata_sink_upserts_metadata(tmp_path):
             model_version text,
             input_blob_path text,
             artifact_manifest_uri text,
-            publish_status text
+            publish_status text,
+            trigger_type text,
+            model_repo text,
+            model_ref text,
+            model_commit_sha text
         )
         """
     )
-    sink = SqlRunMetadataSink(connection=connection)
+    _create_sqlite_snapshot_table(connection)
+    sink = SqlRunMetadataSink(
+        connection=connection,
+        table_name="pricing_run_metadata",
+        snapshot_table_name="model_output_snapshot_metadata",
+    )
 
     first = sink.publish(run_result)
     second = sink.publish(run_result)
@@ -132,6 +141,10 @@ def test_sql_run_metadata_sink_upserts_metadata(tmp_path):
     assert count == 1
     row = connection.execute("select run_id, environment, row_count from pricing_run_metadata").fetchone()
     assert row == (run_result.run_id, "staging", 1)
+    snapshot_row = connection.execute(
+        "select run_id, output_schema_version from model_output_snapshot_metadata"
+    ).fetchone()
+    assert snapshot_row == (run_result.run_id, "pricing_input_schema_v1")
 
 
 def test_sql_run_metadata_sink_retries_transient_upsert_failure(tmp_path):
@@ -151,12 +164,19 @@ def test_sql_run_metadata_sink_retries_transient_upsert_failure(tmp_path):
             model_version text,
             input_blob_path text,
             artifact_manifest_uri text,
-            publish_status text
+            publish_status text,
+            trigger_type text,
+            model_repo text,
+            model_ref text,
+            model_commit_sha text
         )
         """
     )
+    _create_sqlite_snapshot_table(connection)
     sink = SqlRunMetadataSink(
         connection=connection,
+        table_name="pricing_run_metadata",
+        snapshot_table_name="model_output_snapshot_metadata",
         retry_policy=RetryPolicy(attempts=2, delay_seconds=0),
     )
 
@@ -164,6 +184,26 @@ def test_sql_run_metadata_sink_retries_transient_upsert_failure(tmp_path):
 
     assert result.status == PublishStatus.SUCCEEDED
     assert connection.failures == 1
+
+
+def test_sql_run_metadata_sink_uses_sqlserver_merge_with_qmark_params(tmp_path):
+    run_result = _run_result(tmp_path)
+    connection = _RecordingConnection()
+    sink = SqlRunMetadataSink(
+        connection=connection,
+        table_name="dbo.model_run_log",
+        snapshot_table_name="dbo.model_output_snapshot_metadata",
+        dialect="sqlserver",
+    )
+
+    result = sink.publish(run_result)
+
+    assert result.status == PublishStatus.SUCCEEDED
+    assert connection.commits == 1
+    assert connection.executions[0]["statement"].startswith("merge dbo.model_run_log")
+    assert "on target.run_id = source.run_id" in connection.executions[0]["statement"]
+    assert connection.executions[0]["params"][0] == run_result.run_id
+    assert connection.executions[1]["statement"].startswith("merge dbo.model_output_snapshot_metadata")
 
 
 class _FakeBlobService:
@@ -253,6 +293,34 @@ class _FlakyConnection:
 
     def commit(self):
         return self._connection.commit()
+
+
+class _RecordingConnection:
+    def __init__(self):
+        self.executions = []
+        self.commits = 0
+
+    def execute(self, statement, params):
+        self.executions.append({"statement": statement, "params": params})
+
+    def commit(self):
+        self.commits += 1
+
+
+def _create_sqlite_snapshot_table(connection) -> None:
+    connection.execute(
+        """
+        create table model_output_snapshot_metadata (
+            run_id text primary key,
+            environment text,
+            snapshot_uri text,
+            row_count integer,
+            drift_status text,
+            output_schema_version text,
+            created_at_utc text
+        )
+        """
+    )
 
 
 def _run_result(tmp_path) -> RunResult:

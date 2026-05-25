@@ -98,7 +98,9 @@ class AzureMlArtifactSink:
 @dataclass(frozen=True)
 class SqlRunMetadataSink:
     connection: Any
-    table_name: str = "pricing_run_metadata"
+    table_name: str = "model_run_log"
+    snapshot_table_name: str = "model_output_snapshot_metadata"
+    dialect: str = "sqlite"
     retry_policy: RetryPolicy = RetryPolicy()
     required: bool = False
     name: str = "sql_metadata"
@@ -120,9 +122,33 @@ class SqlRunMetadataSink:
             "input_blob_path": metadata.input_blob_path,
             "artifact_manifest_uri": artifact_manifest_uri,
             "publish_status": publish_status,
+            "trigger_type": metadata.trigger_type,
+            "model_repo": metadata.model_repo,
+            "model_ref": metadata.model_ref,
+            "model_commit_sha": metadata.model_commit_sha,
+        }
+        snapshot_payload = {
+            "run_id": metadata.run_id,
+            "environment": metadata.environment,
+            "snapshot_uri": _artifact_uri(run_result, "model_output_snapshot") or "",
+            "row_count": metadata.row_count,
+            "drift_status": metadata.drift_status,
+            "output_schema_version": metadata.schema_version,
+            "created_at_utc": metadata.finished_at_utc,
         }
         try:
-            self.retry_policy.run(lambda: _upsert_metadata(self.connection, self.table_name, payload))
+            self.retry_policy.run(
+                lambda: (
+                    _upsert_metadata(self.connection, self.table_name, payload, self.dialect),
+                    _upsert_snapshot_metadata(
+                        self.connection,
+                        self.snapshot_table_name,
+                        snapshot_payload,
+                        self.dialect,
+                    ),
+                    self.connection.commit(),
+                )
+            )
         except Exception as exc:
             return SinkPublishResult(self.name, PublishStatus.FAILED, failed={"sql": str(exc)})
         return SinkPublishResult(
@@ -162,9 +188,20 @@ def _publish_azure_ml_metadata(tracking_client, tags: dict[str, object], run_res
         tracking_client.set_tag(f"artifact.{artifact.logical_name}", artifact.filename)
 
 
-def _upsert_metadata(connection, table_name: str, payload: dict[str, object]) -> None:
-    connection.execute(_upsert_sql(table_name), payload)
-    connection.commit()
+def _upsert_metadata(connection, table_name: str, payload: dict[str, object], dialect: str) -> None:
+    _execute(connection, _run_log_upsert_sql(table_name, dialect), payload, dialect)
+
+
+def _upsert_snapshot_metadata(connection, table_name: str, payload: dict[str, object], dialect: str) -> None:
+    _execute(connection, _snapshot_upsert_sql(table_name, dialect), payload, dialect)
+
+
+def _execute(connection, statement: str, payload: dict[str, object], dialect: str) -> None:
+    if dialect == "sqlserver":
+        columns = _sqlserver_parameters(statement)
+        connection.execute(statement, tuple(payload[column] for column in columns))
+        return
+    connection.execute(statement, payload)
 
 
 def _manifest_uri(run_result: RunResult) -> str:
@@ -173,16 +210,50 @@ def _manifest_uri(run_result: RunResult) -> str:
     return json.dumps(run_result.manifest.artifact_filenames(), sort_keys=True)
 
 
-def _upsert_sql(table_name: str) -> str:
+def _artifact_uri(run_result: RunResult, logical_name: str) -> str | None:
+    artifact = run_result.manifest.by_logical_name().get(logical_name)
+    if artifact is None:
+        return None
+    if run_result.run_dir:
+        return str(artifact.local_path)
+    return artifact.filename
+
+
+def _run_log_upsert_sql(table_name: str, dialect: str) -> str:
+    if dialect == "sqlserver":
+        return _sqlserver_merge_sql(
+            table_name,
+            key_column="run_id",
+            columns=(
+                "run_id",
+                "environment",
+                "owner",
+                "status",
+                "row_count",
+                "drift_status",
+                "started_at_utc",
+                "finished_at_utc",
+                "model_version",
+                "input_blob_path",
+                "artifact_manifest_uri",
+                "publish_status",
+                "trigger_type",
+                "model_repo",
+                "model_ref",
+                "model_commit_sha",
+            ),
+        )
     return f"""
 insert into {table_name} (
     run_id, environment, owner, status, row_count, drift_status,
     started_at_utc, finished_at_utc, model_version, input_blob_path,
-    artifact_manifest_uri, publish_status
+    artifact_manifest_uri, publish_status, trigger_type, model_repo, model_ref,
+    model_commit_sha
 ) values (
     :run_id, :environment, :owner, :status, :row_count, :drift_status,
     :started_at_utc, :finished_at_utc, :model_version, :input_blob_path,
-    :artifact_manifest_uri, :publish_status
+    :artifact_manifest_uri, :publish_status, :trigger_type, :model_repo,
+    :model_ref, :model_commit_sha
 )
 on conflict(run_id) do update set
     environment = excluded.environment,
@@ -195,5 +266,65 @@ on conflict(run_id) do update set
     model_version = excluded.model_version,
     input_blob_path = excluded.input_blob_path,
     artifact_manifest_uri = excluded.artifact_manifest_uri,
-    publish_status = excluded.publish_status
+    publish_status = excluded.publish_status,
+    trigger_type = excluded.trigger_type,
+    model_repo = excluded.model_repo,
+    model_ref = excluded.model_ref,
+    model_commit_sha = excluded.model_commit_sha
 """.strip()
+
+
+def _snapshot_upsert_sql(table_name: str, dialect: str) -> str:
+    if dialect == "sqlserver":
+        return _sqlserver_merge_sql(
+            table_name,
+            key_column="run_id",
+            columns=(
+                "run_id",
+                "environment",
+                "snapshot_uri",
+                "row_count",
+                "drift_status",
+                "output_schema_version",
+                "created_at_utc",
+            ),
+        )
+    return f"""
+insert into {table_name} (
+    run_id, environment, snapshot_uri, row_count, drift_status,
+    output_schema_version, created_at_utc
+) values (
+    :run_id, :environment, :snapshot_uri, :row_count, :drift_status,
+    :output_schema_version, :created_at_utc
+)
+on conflict(run_id) do update set
+    environment = excluded.environment,
+    snapshot_uri = excluded.snapshot_uri,
+    row_count = excluded.row_count,
+    drift_status = excluded.drift_status,
+    output_schema_version = excluded.output_schema_version,
+    created_at_utc = excluded.created_at_utc
+""".strip()
+
+
+def _sqlserver_merge_sql(table_name: str, key_column: str, columns: tuple[str, ...]) -> str:
+    placeholders = ", ".join(f"? as {column}" for column in columns)
+    update_columns = [column for column in columns if column != key_column]
+    update_clause = ", ".join(f"target.{column} = source.{column}" for column in update_columns)
+    insert_columns = ", ".join(columns)
+    insert_values = ", ".join(f"source.{column}" for column in columns)
+    return f"""
+merge {table_name} as target
+using (select {placeholders}) as source
+on target.{key_column} = source.{key_column}
+when matched then
+  update set {update_clause}
+when not matched then
+  insert ({insert_columns})
+  values ({insert_values});
+""".strip()
+
+
+def _sqlserver_parameters(statement: str) -> tuple[str, ...]:
+    select_clause = statement.split(") as source", 1)[0]
+    return tuple(part.rsplit(" as ", 1)[1].strip() for part in select_clause.split("select ", 1)[1].split(", "))

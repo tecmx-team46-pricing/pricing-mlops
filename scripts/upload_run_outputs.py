@@ -10,7 +10,16 @@ import subprocess
 import sys
 from typing import Callable
 
-from pricing_mlops.artifact_publishing import ArtifactLayout, AzureBlobArtifactSink, PublishingConfig, RunMetadata, RunPartition, RunResult
+from pricing_mlops.artifact_publishing import (
+    ArtifactLayout,
+    ArtifactPublisher,
+    AzureBlobArtifactSink,
+    PublishingConfig,
+    RunMetadata,
+    RunPartition,
+    RunResult,
+    SqlRunMetadataSink,
+)
 from pricing_mlops.artifact_publishing.layout import manifest_from_run_dir
 
 
@@ -161,6 +170,31 @@ def publish_run_outputs_with_blob_sink(
     compute_target: str | None = None,
     trigger_type: str | None = None,
 ):
+    return publish_run_outputs_with_sinks(
+        run_dir=run_dir,
+        blob_service=blob_service,
+        environment=environment,
+        run_owner=run_owner,
+        containers=containers,
+        compute_target=compute_target,
+        trigger_type=trigger_type,
+        sql_connection=None,
+    ).sinks[0]
+
+
+def publish_run_outputs_with_sinks(
+    run_dir: Path,
+    blob_service,
+    environment: str,
+    run_owner: str,
+    containers: dict[str, str],
+    compute_target: str | None = None,
+    trigger_type: str | None = None,
+    sql_connection=None,
+    sql_dialect: str = "sqlite",
+    sql_table_name: str = "model_run_log",
+    sql_snapshot_table_name: str = "model_output_snapshot_metadata",
+):
     run_log = _run_log(Path(run_dir))
     metadata = _metadata_from_log(run_log)
     run_result = RunResult(
@@ -175,11 +209,31 @@ def publish_run_outputs_with_blob_sink(
         compute_target=compute_target,
         trigger_type=trigger_type,
     )
-    return AzureBlobArtifactSink(
-        blob_service=blob_service,
-        layout=ArtifactLayout.default(containers),
-        partition=partition,
-    ).publish(run_result)
+    config = PublishingConfig.from_env()
+    sinks = []
+    for sink_name in config.enabled_sink_names():
+        if sink_name == "azure_blob":
+            sinks.append(
+                AzureBlobArtifactSink(
+                    blob_service=blob_service,
+                    layout=ArtifactLayout.default(containers),
+                    partition=partition,
+                    required=config.is_required("azure_blob"),
+                )
+            )
+        elif sink_name == "sql_metadata" and sql_connection is not None:
+            sinks.append(
+                SqlRunMetadataSink(
+                    connection=sql_connection,
+                    table_name=sql_table_name,
+                    snapshot_table_name=sql_snapshot_table_name,
+                    dialect=sql_dialect,
+                    required=config.is_required("sql_metadata"),
+                )
+            )
+    if not sinks:
+        raise ValueError("no artifact sinks are enabled")
+    return ArtifactPublisher(tuple(sinks)).publish(run_result)
 
 
 def _run_id_from_log(run_dir: Path) -> str:
