@@ -3,6 +3,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 import json
 from pathlib import Path
+import re
 import shutil
 from typing import Any
 
@@ -10,6 +11,9 @@ from pricing_mlops.artifact_publishing.layout import ArtifactLayout, RunPartitio
 from pricing_mlops.artifact_publishing.models import RunResult
 from pricing_mlops.artifact_publishing.publishing import PublishStatus, SinkPublishResult
 from pricing_mlops.artifact_publishing.retry import RetryPolicy
+
+
+SQL_IDENTIFIER_RE = re.compile(r"^[A-Za-z_][A-Za-z0-9_]*(\.[A-Za-z_][A-Za-z0-9_]*)?$")
 
 
 @dataclass(frozen=True)
@@ -106,6 +110,12 @@ class SqlRunMetadataSink:
     name: str = "sql_metadata"
 
     def publish(self, run_result: RunResult) -> SinkPublishResult:
+        try:
+            table_name = _validated_sql_identifier(self.table_name)
+            snapshot_table_name = _validated_sql_identifier(self.snapshot_table_name)
+        except ValueError as exc:
+            return SinkPublishResult(self.name, PublishStatus.FAILED, failed={"sql": str(exc)})
+
         metadata = run_result.metadata
         artifact_manifest_uri = _manifest_uri(run_result)
         publish_status = metadata.status
@@ -139,10 +149,10 @@ class SqlRunMetadataSink:
         try:
             self.retry_policy.run(
                 lambda: (
-                    _upsert_metadata(self.connection, self.table_name, payload, self.dialect),
+                    _upsert_metadata(self.connection, table_name, payload, self.dialect),
                     _upsert_snapshot_metadata(
                         self.connection,
-                        self.snapshot_table_name,
+                        snapshot_table_name,
                         snapshot_payload,
                         self.dialect,
                     ),
@@ -220,6 +230,7 @@ def _artifact_uri(run_result: RunResult, logical_name: str) -> str | None:
 
 
 def _run_log_upsert_sql(table_name: str, dialect: str) -> str:
+    table_name = _validated_sql_identifier(table_name)
     if dialect == "sqlserver":
         return _sqlserver_merge_sql(
             table_name,
@@ -275,6 +286,7 @@ on conflict(run_id) do update set
 
 
 def _snapshot_upsert_sql(table_name: str, dialect: str) -> str:
+    table_name = _validated_sql_identifier(table_name)
     if dialect == "sqlserver":
         return _sqlserver_merge_sql(
             table_name,
@@ -308,6 +320,7 @@ on conflict(run_id) do update set
 
 
 def _sqlserver_merge_sql(table_name: str, key_column: str, columns: tuple[str, ...]) -> str:
+    table_name = _validated_sql_identifier(table_name)
     placeholders = ", ".join(f"? as {column}" for column in columns)
     update_columns = [column for column in columns if column != key_column]
     update_clause = ", ".join(f"target.{column} = source.{column}" for column in update_columns)
@@ -323,6 +336,12 @@ when not matched then
   insert ({insert_columns})
   values ({insert_values});
 """.strip()
+
+
+def _validated_sql_identifier(identifier: str) -> str:
+    if not SQL_IDENTIFIER_RE.fullmatch(identifier):
+        raise ValueError(f"unsafe SQL identifier: {identifier}")
+    return identifier
 
 
 def _sqlserver_parameters(statement: str) -> tuple[str, ...]:

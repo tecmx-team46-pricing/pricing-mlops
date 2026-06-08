@@ -114,7 +114,7 @@ def test_publish_outputs_uses_trigger_partition(monkeypatch, tmp_path):
 
     uploaded = publish_component_outputs(
         run_dir=run_dir,
-        storage_account="<mlops-storage-account>",
+        storage_account="mlopsstorageexample",
         environment="staging",
         run_owner="team46",
         compute_target="azure-ml",

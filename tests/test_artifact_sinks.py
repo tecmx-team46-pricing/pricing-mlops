@@ -2,6 +2,8 @@ from __future__ import annotations
 
 import sqlite3
 
+import pytest
+
 from pricing_mlops.artifact_publishing import (
     ArtifactLayout,
     AzureBlobArtifactSink,
@@ -204,6 +206,61 @@ def test_sql_run_metadata_sink_uses_sqlserver_merge_with_qmark_params(tmp_path):
     assert "on target.run_id = source.run_id" in connection.executions[0]["statement"]
     assert connection.executions[0]["params"][0] == run_result.run_id
     assert connection.executions[1]["statement"].startswith("merge dbo.model_output_snapshot_metadata")
+
+
+def test_sql_run_metadata_sink_rejects_unsafe_sqlite_table_name(tmp_path):
+    run_result = _run_result(tmp_path)
+    connection = sqlite3.connect(":memory:")
+    sink = SqlRunMetadataSink(
+        connection=connection,
+        table_name="model_run_log; drop table model_run_log",
+        snapshot_table_name="model_output_snapshot_metadata",
+    )
+
+    result = sink.publish(run_result)
+
+    assert result.status == PublishStatus.FAILED
+    assert "unsafe SQL identifier" in result.failed["sql"]
+
+
+def test_sql_run_metadata_sink_rejects_unsafe_sqlserver_snapshot_table_name(tmp_path):
+    run_result = _run_result(tmp_path)
+    connection = _RecordingConnection()
+    sink = SqlRunMetadataSink(
+        connection=connection,
+        table_name="dbo.model_run_log",
+        snapshot_table_name="dbo.model_output_snapshot_metadata; drop table dbo.model_run_log",
+        dialect="sqlserver",
+    )
+
+    result = sink.publish(run_result)
+
+    assert result.status == PublishStatus.FAILED
+    assert "unsafe SQL identifier" in result.failed["sql"]
+    assert connection.executions == []
+
+
+@pytest.mark.parametrize(
+    "table_name",
+    [
+        "model_run_log",
+        "dbo.model_run_log",
+    ],
+)
+def test_sql_run_metadata_sink_accepts_safe_table_names(tmp_path, table_name):
+    run_result = _run_result(tmp_path)
+    connection = _RecordingConnection()
+    sink = SqlRunMetadataSink(
+        connection=connection,
+        table_name=table_name,
+        snapshot_table_name="dbo.model_output_snapshot_metadata",
+        dialect="sqlserver",
+    )
+
+    result = sink.publish(run_result)
+
+    assert result.status == PublishStatus.SUCCEEDED
+    assert connection.executions[0]["statement"].startswith(f"merge {table_name}")
 
 
 class _FakeBlobService:
