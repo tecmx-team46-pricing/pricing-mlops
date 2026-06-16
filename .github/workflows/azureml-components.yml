@@ -12,6 +12,8 @@ on:
       - "azureml/environment.yml"
       - "azureml/conda.yml"
       - "scripts/components/**"
+      - "src/pricing/auth_monitoring/**"
+      - "src/pricing_mlops/monitoring/pipeline/**"
       - "scripts/deploy_auth_monitoring_batch_endpoint.sh"
       - "scripts/invoke_auth_monitoring_batch_endpoint.sh"
       - "scripts/register_azureml_components.sh"
@@ -47,6 +49,21 @@ jobs:
           AZURE_RESOURCE_GROUP: ${{ vars.AZURE_RESOURCE_GROUP }}
           AZURE_ML_WORKSPACE: ${{ vars.AZURE_ML_WORKSPACE }}
         run: scripts/register_azureml_components.sh
+
+      - name: Deploy AUTH monitoring batch endpoint
+        env:
+          AZURE_RESOURCE_GROUP: ${{ vars.AZURE_RESOURCE_GROUP }}
+          AZURE_ML_WORKSPACE: ${{ vars.AZURE_ML_WORKSPACE }}
+        run: scripts/deploy_auth_monitoring_batch_endpoint.sh
+
+      - name: Invoke AUTH monitoring smoke test
+        env:
+          AZURE_RESOURCE_GROUP: ${{ vars.AZURE_RESOURCE_GROUP }}
+          AZURE_ML_WORKSPACE: ${{ vars.AZURE_ML_WORKSPACE }}
+          AZURE_STORAGE_ACCOUNT: ${{ vars.AZURE_STORAGE_ACCOUNT }}
+          AZURE_ML_JOB_IDENTITY_CLIENT_ID: ${{ vars.AZURE_ML_JOB_IDENTITY_CLIENT_ID }}
+          AZURE_ML_WAIT_FOR_COMPLETION: "true"
+        run: scripts/invoke_auth_monitoring_batch_endpoint.sh
 
       - name: Upload AUTH monitoring release manifest
         uses: actions/upload-artifact@v4

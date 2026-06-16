@@ -21,7 +21,7 @@ def test_auth_monitoring_batch_endpoint_targets_repo_owned_pipeline_component():
     assert deployment["name"] == "blue"
     assert deployment["type"] == "pipeline"
     assert deployment["component"] == manifest["pipeline_component"]
-    assert deployment["component"] == "azureml:pricing_mlops_auth_monitoring_pipeline:0.1.3"
+    assert deployment["component"] == "azureml:pricing_mlops_auth_monitoring_pipeline:0.1.4"
     assert deployment["settings"]["default_compute"] == "serverless"
     assert deployment["settings"]["continue_on_step_failure"] is False
 
@@ -40,6 +40,8 @@ def test_deploy_script_promotes_manifest_pipeline_component():
     assert "AZURE_ML_PIPELINE_COMPONENT" in deploy_script
 
     assert "az ml batch-endpoint invoke" in invoke_script
+    assert "AZURE_ML_WAIT_FOR_COMPLETION" in invoke_script
+    assert "az ml job show" in invoke_script
     assert "--deployment-name" in invoke_script
     assert "--experiment-name pricing-mlops-batch-endpoint" in invoke_script
     assert "--set" in invoke_script

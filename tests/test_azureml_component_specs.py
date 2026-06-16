@@ -8,6 +8,7 @@ COMPONENT_DIR = ROOT / "azureml" / "components"
 REGISTER_SCRIPT = ROOT / "scripts" / "register_azureml_components.sh"
 AMLIGNORE = ROOT / ".amlignore"
 COMPONENT_VERSION = "0.1.2"
+MONITORING_COMPONENT_VERSION = "0.1.3"
 RUNTIME_ENVIRONMENT = "azureml:pricing-mlops-runtime:0.1.0"
 
 EXPECTED_COMPONENTS = {
@@ -71,10 +72,11 @@ EXPECTED_COMPONENTS = {
 def test_azureml_component_specs_are_registered_units():
     for slug, expected in EXPECTED_COMPONENTS.items():
         component = yaml.safe_load((COMPONENT_DIR / f"{slug}.yml").read_text(encoding="utf-8"))
+        expected_version = MONITORING_COMPONENT_VERSION if "step" in expected else COMPONENT_VERSION
 
         assert component["type"] == "command"
         assert component["name"] == expected["name"]
-        assert component["version"] == COMPONENT_VERSION
+        assert component["version"] == expected_version
         assert component["code"] == "../.."
         assert component["environment"] == RUNTIME_ENVIRONMENT
         assert set(component["inputs"]) == expected["inputs"]

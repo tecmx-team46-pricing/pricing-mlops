@@ -1,13 +1,13 @@
 {
-  "release": "auth-monitoring-0.1.3",
+  "release": "auth-monitoring-0.1.4",
   "owner_repo": "tecmx-team46-pricing/pricing-mlops",
-  "pipeline_component": "azureml:pricing_mlops_auth_monitoring_pipeline:0.1.3",
+  "pipeline_component": "azureml:pricing_mlops_auth_monitoring_pipeline:0.1.4",
   "components": {
     "validate_prepare": "azureml:pricing_mlops_validate_prepare:0.1.2",
-    "build_monitoring_inputs": "azureml:pricing_mlops_build_monitoring_inputs:0.1.2",
-    "calculate_recommendation_validity": "azureml:pricing_mlops_calculate_recommendation_validity:0.1.2",
-    "calculate_auth_history_drift": "azureml:pricing_mlops_calculate_auth_history_drift:0.1.2",
-    "calculate_operational_decision": "azureml:pricing_mlops_calculate_operational_decision:0.1.2",
+    "build_monitoring_inputs": "azureml:pricing_mlops_build_monitoring_inputs:0.1.3",
+    "calculate_recommendation_validity": "azureml:pricing_mlops_calculate_recommendation_validity:0.1.3",
+    "calculate_auth_history_drift": "azureml:pricing_mlops_calculate_auth_history_drift:0.1.3",
+    "calculate_operational_decision": "azureml:pricing_mlops_calculate_operational_decision:0.1.3",
     "publish_outputs": "azureml:pricing_mlops_publish_outputs:0.1.2"
   }
 }

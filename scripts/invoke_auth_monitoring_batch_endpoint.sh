@@ -21,6 +21,9 @@ MODEL_REF="${MODEL_REPO_REF:-main}"
 MODEL_COMMIT_SHA="${MODEL_REPO_COMMIT_SHA:-unknown}"
 MONITORING_CONFIG_VERSION="${MLOPS_MONITORING_CONFIG_VERSION:-2026-05-07}"
 MONITORING_CONFIG_PATH="${MLOPS_MONITORING_CONFIG_PATH:-configs/drift_thresholds.json}"
+WAIT_FOR_COMPLETION="${AZURE_ML_WAIT_FOR_COMPLETION:-false}"
+WAIT_TIMEOUT_SECONDS="${AZURE_ML_WAIT_TIMEOUT_SECONDS:-1800}"
+WAIT_INTERVAL_SECONDS="${AZURE_ML_WAIT_INTERVAL_SECONDS:-30}"
 
 JOB_NAME="$(
   az ml batch-endpoint invoke \
@@ -58,3 +61,32 @@ azure_ml_job_name=${JOB_NAME}
 run_id=${RUN_ID}
 expected_output_prefix=${EXPECTED_OUTPUT_PREFIX}
 EOF
+
+if [[ "${WAIT_FOR_COMPLETION}" == "true" ]]; then
+  deadline=$((SECONDS + WAIT_TIMEOUT_SECONDS))
+  while true; do
+    JOB_STATUS="$(
+      az ml job show \
+        --resource-group "${RESOURCE_GROUP}" \
+        --workspace-name "${WORKSPACE}" \
+        --name "${JOB_NAME}" \
+        --query status \
+        -o tsv
+    )"
+    echo "azure_ml_job_status=${JOB_STATUS}"
+    case "${JOB_STATUS}" in
+      Completed)
+        exit 0
+        ;;
+      Failed|Canceled|NotResponding)
+        echo "Azure ML job reached terminal failure status: ${JOB_STATUS}" >&2
+        exit 1
+        ;;
+    esac
+    if (( SECONDS >= deadline )); then
+      echo "Timed out waiting for Azure ML job ${JOB_NAME} after ${WAIT_TIMEOUT_SECONDS}s." >&2
+      exit 1
+    fi
+    sleep "${WAIT_INTERVAL_SECONDS}"
+  done
+fi
