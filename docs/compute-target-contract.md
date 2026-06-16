@@ -5,23 +5,24 @@
 La ruta remota activa es:
 
 ```text
-Azure Function -> Azure ML pipeline/job -> Storage MLOps outputs
+Azure ML batch endpoint
+-> pipeline component
+-> command components
+-> Storage MLOps outputs
 ```
 
-El pipeline activo se define y ejecuta desde `pricing-mlops-platform`. La plataforma empaqueta un snapshot de este repo como `pricing-mlops-source/`.
-
-El pipeline visible se compone de pasos funcionales de este repo y un paso de publicacion de plataforma:
+El pipeline visible se compone de:
 
 | Componente | Entrypoint | Salida principal |
 |---|---|---|
-| `validate_prepare` | `scripts/components/validate_prepare.py` | `curated_input.csv`, `validation_metadata.json` |
-| `build_monitoring_inputs` | `scripts/components/build_monitoring_inputs.py` | Snapshots normalizados para monitoreo |
-| `calculate_recommendation_validity` | `scripts/components/calculate_recommendation_validity.py` | Logs y summaries de validez de recomendacion |
-| `calculate_auth_history_drift` | `scripts/components/calculate_auth_history_drift.py` | Drift AUTH history y reporte markdown |
-| `calculate_operational_decision` | `scripts/components/calculate_operational_decision.py` | Semaforo operacional y manifest final |
-| `platform_publish_outputs` | `pricing-mlops-platform/mlops/components/platform_publish_outputs.py` | Blobs finales en Storage MLOps |
+| `pricing_mlops_validate_prepare` | `scripts/components/validate_prepare.py` | `curated_input.csv`, `validation_metadata.json` |
+| `pricing_mlops_build_monitoring_inputs` | `scripts/components/build_monitoring_inputs.py` | Snapshots normalizados para monitoreo |
+| `pricing_mlops_calculate_recommendation_validity` | `scripts/components/calculate_recommendation_validity.py` | Logs y summaries de validez de recomendacion |
+| `pricing_mlops_calculate_auth_history_drift` | `scripts/components/calculate_auth_history_drift.py` | Drift AUTH history y reporte markdown |
+| `pricing_mlops_calculate_operational_decision` | `scripts/components/calculate_operational_decision.py` | Semaforo operacional y manifest final |
+| `pricing_mlops_publish_outputs` | `scripts/components/publish_outputs.py` | Blobs finales en Storage MLOps |
 
-La Function inyecta estos inputs:
+Inputs principales:
 
 ```text
 storage_account
@@ -37,23 +38,20 @@ baseline_snapshot_container
 baseline_snapshot_blob_path
 current_history_container
 current_history_blob_path
+job_identity_client_id
 ```
 
-`storage_account` debe ser el Storage MLOps funcional publicado por plataforma. En `staging` es `<mlops-storage-account>`.
-
-El workspace Azure ML activo de `staging` es `mlw-pricing-mlops-stg-v2-<suffix>`. Su storage asociado es el Storage runtime AML, separado del Storage MLOps funcional.
-
-La ruta AUTH monitoring usa el contrato de configuracion `src/pricing/auth_monitoring/auth_monitoring_config.json` para umbrales, columnas y versiones metodologicas.
+`storage_account` debe ser el Storage MLOps funcional publicado por platform. El workspace y la identidad de job son recursos base provisionados fuera de este repo.
 
 ## Containers Funcionales
 
-El modelo solo lee datos masked desde:
+El pipeline lee datos masked desde:
 
 ```text
 raw-masked/<input_blob_path>
 ```
 
-El modelo escribe outputs funcionales en:
+El pipeline publica outputs funcionales en:
 
 ```text
 curated
@@ -64,30 +62,13 @@ reports
 artifacts
 ```
 
-Cada ruta usa:
-
-```text
-environment=<env>/compute=azure-ml/trigger=<manual|event-grid>/owner=<owner>/run_date=<yyyymmdd>/run_id=<run_id>/
-```
-
 ## Artifacts Internos Azure ML
 
-Azure ML puede crear artifacts internos de runtime:
-
-```text
-azureml
-azureml-environments
-azureml-blobstore-*
-snapshotzips
-revisions
-aml-environment-image-build
-```
-
-Esos artifacts pertenecen al workspace/runtime de Azure ML, no al contrato funcional de `pricing-mlops`. No deben usarse como fuente de datos, outputs de negocio ni evidencia funcional del modelo.
+Azure ML puede crear artifacts internos de runtime como snapshots, environments, logs y job artifacts. Esos artifacts pertenecen al workspace/runtime de Azure ML, no al contrato funcional de `pricing-mlops`.
 
 ## Seguridad
 
-- No usar account keys ni connection strings para datos MLOps.
+- No usar account keys ni connection strings.
 - No usar `raw-unmasked`.
 - No asumir que el Storage runtime de Azure ML y el Storage MLOps son la misma cuenta.
-- GitHub Actions de este repo no opera el flujo remoto; solo valida el package funcional.
+- GitHub Actions de este repo puede registrar componentes y actualizar el endpoint usando OIDC/RBAC configurado por platform.

@@ -2,23 +2,53 @@
 
 ## Verificacion Local
 
-Este repo se valida localmente como package funcional:
-
 ```bash
 python -m compileall src scripts tests
 python -m pytest
 python scripts/validate_inputs.py --input data/samples/masked/sample_pricing.csv
 ```
 
-## Operacion Azure
+## Registrar Componentes En Azure ML
 
-La ejecucion remota del flujo, el diagnostico de Function App, Azure ML, Storage y costos se documenta y opera desde `pricing-mlops-platform`.
+```bash
+AZURE_SUBSCRIPTION_ID=<subscription-id> \
+AZURE_RESOURCE_GROUP=<resource-group> \
+AZURE_ML_WORKSPACE=<workspace> \
+scripts/register_azureml_components.sh
+```
 
-Este repo no mantiene runbooks de operacion Azure ni variables de ambiente de plataforma.
+El script registra el environment, command components y `pricing_mlops_auth_monitoring_pipeline`.
+
+## Desplegar Endpoint
+
+```bash
+AZURE_RESOURCE_GROUP=<resource-group> \
+AZURE_ML_WORKSPACE=<workspace> \
+scripts/deploy_auth_monitoring_batch_endpoint.sh
+```
+
+El script valida que el pipeline component del manifest exista y crea/actualiza `pricing-auth-monitoring/blue`.
+
+## Invocar Smoke Test
+
+```bash
+AZURE_RESOURCE_GROUP=<resource-group> \
+AZURE_ML_WORKSPACE=<workspace> \
+AZURE_STORAGE_ACCOUNT=<storage-account> \
+AZURE_ML_JOB_IDENTITY_CLIENT_ID=<client-id> \
+scripts/invoke_auth_monitoring_batch_endpoint.sh
+```
+
+El resultado imprime:
+
+```text
+accepted=true
+azure_ml_job_name=<job-name>
+run_id=<run-id>
+expected_output_prefix=<storage-prefix>
+```
 
 ## AUTH Monitoring Pipeline
-
-La ruta AUTH monitoring se opera desde `pricing-mlops-platform`. Este repo solo aporta los componentes funcionales y la copia transicional del notebook.
 
 Pasos esperados en Azure ML:
 
@@ -38,4 +68,4 @@ baseline recommendation snapshot path
 current AUTH history snapshot path
 ```
 
-La publicacion final a Storage/SQL/Azure ML pertenece a `pricing-mlops-platform`; los componentes de este repo solo materializan artefactos locales o estado intermedio para el pipeline.
+La publicacion final a Storage ocurre en `pricing_mlops_publish_outputs`, dentro de este repo.
