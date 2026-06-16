@@ -137,11 +137,15 @@ def test_old_monitoring_imports_are_not_reintroduced():
 
 def test_model_repo_workflows_do_not_operate_azure_flow():
     repo_root = Path(__file__).resolve().parents[1]
+    allowed_asset_registration_workflows = {
+        repo_root / ".github" / "workflows" / "azureml-components.yml"
+    }
     workflow_files = sorted((repo_root / ".github" / "workflows").glob("*.yml"))
 
     violations = {
         str(path.relative_to(repo_root)): token
         for path in workflow_files
+        if path not in allowed_asset_registration_workflows
         for token in FORBIDDEN_MODEL_REPO_WORKFLOW_TOKENS
         if token in path.read_text(encoding="utf-8", errors="ignore")
     }

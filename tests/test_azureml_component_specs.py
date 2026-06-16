@@ -103,5 +103,19 @@ def test_amlignore_keeps_component_snapshots_small_and_masked():
         assert pattern in ignored
 
 
-def test_model_repo_does_not_add_azure_registration_workflow():
-    assert not (ROOT / ".github" / "workflows" / "register-azureml-components.yml").exists()
+def test_model_repo_registers_components_from_github_actions():
+    workflow = yaml.safe_load(
+        (ROOT / ".github" / "workflows" / "azureml-components.yml").read_text(encoding="utf-8")
+    )
+    triggers = workflow[True]
+    push = triggers["push"]
+    steps = workflow["jobs"]["register-components"]["steps"]
+    step_text = "\n".join(str(step) for step in steps)
+
+    assert push["branches"] == ["main"]
+    assert "azureml/components/**" in push["paths"]
+    assert "scripts/register_azureml_components.sh" in push["paths"]
+    assert workflow["permissions"] == {"contents": "read", "id-token": "write"}
+    assert workflow["jobs"]["register-components"]["environment"] == "staging"
+    assert "azure/login@v2" in step_text
+    assert "scripts/register_azureml_components.sh" in step_text

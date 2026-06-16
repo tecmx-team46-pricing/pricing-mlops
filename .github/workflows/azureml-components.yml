@@ -1,0 +1,44 @@
+name: azureml-components
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - "azureml/components/**"
+      - "azureml/environment.yml"
+      - "azureml/conda.yml"
+      - "scripts/components/**"
+      - "scripts/register_azureml_components.sh"
+      - ".github/workflows/azureml-components.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  id-token: write
+
+jobs:
+  register-components:
+    runs-on: ubuntu-latest
+    environment: staging
+    steps:
+      - name: Checkout model repo
+        uses: actions/checkout@v4
+
+      - name: Azure login
+        uses: azure/login@v2
+        with:
+          client-id: ${{ vars.AZURE_CLIENT_ID }}
+          tenant-id: ${{ vars.AZURE_TENANT_ID }}
+          subscription-id: ${{ vars.AZURE_SUBSCRIPTION_ID }}
+
+      - name: Install Azure ML CLI extension
+        run: |
+          az extension add --name ml --yes || az extension update --name ml
+
+      - name: Register Azure ML components
+        env:
+          AZURE_SUBSCRIPTION_ID: ${{ vars.AZURE_SUBSCRIPTION_ID }}
+          AZURE_RESOURCE_GROUP: ${{ vars.AZURE_RESOURCE_GROUP }}
+          AZURE_ML_WORKSPACE: ${{ vars.AZURE_ML_WORKSPACE }}
+        run: scripts/register_azureml_components.sh
