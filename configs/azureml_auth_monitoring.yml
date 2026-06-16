@@ -1,0 +1,23 @@
+subscription_name: Tecmx
+resource_group: rg-pricing-mlops-main
+workspace: mlw-pmlops-06152240
+
+environment: azureml/environment.yml
+
+components:
+  - azureml/components/validate_prepare.yml
+  - azureml/components/build_monitoring_inputs.yml
+  - azureml/components/calculate_recommendation_validity.yml
+  - azureml/components/calculate_auth_history_drift.yml
+  - azureml/components/calculate_operational_decision.yml
+  - azureml/components/publish_outputs.yml
+
+pipeline: azureml/pipelines/auth_monitoring_pipeline.yml
+
+endpoint:
+  name: pricing-auth-monitoring
+  deployment: blue
+  endpoint_file: azureml/endpoints/auth-monitoring-batch-endpoint.yml
+  deployment_file: azureml/endpoints/auth-monitoring-batch-deployment.yml
+
+manifest: azureml/manifests/auth-monitoring-release.json
