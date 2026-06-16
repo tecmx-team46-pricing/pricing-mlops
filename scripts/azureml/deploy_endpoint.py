@@ -3,11 +3,11 @@ from __future__ import annotations
 import argparse
 import json
 import sys
-import tempfile
 from pathlib import Path
 
 import yaml
-from azure.ai.ml import load_batch_deployment, load_batch_endpoint
+from azure.ai.ml import load_batch_endpoint
+from azure.ai.ml.entities import PipelineComponentBatchDeployment
 
 if __package__ in (None, ""):
     sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
@@ -34,16 +34,20 @@ def _pipeline_component_from_manifest(manifest_path: Path) -> str:
     return component
 
 
-def _render_deployment_file(source_file: Path, component_id: str) -> Path:
+def _load_pipeline_deployment(source_file: Path, component_id: str) -> PipelineComponentBatchDeployment:
     data = yaml.safe_load(source_file.read_text(encoding="utf-8"))
     if not isinstance(data, dict):
         raise ValueError(f"Deployment YAML must be a mapping: {source_file}")
-    data["component"] = component_id
+    settings = data.get("settings")
+    if not isinstance(settings, dict):
+        raise ValueError(f"Pipeline deployment settings must be a mapping: {source_file}")
 
-    temp = tempfile.NamedTemporaryFile("w", suffix=".yml", delete=False, encoding="utf-8")
-    with temp:
-        yaml.safe_dump(data, temp, sort_keys=False)
-    return Path(temp.name)
+    return PipelineComponentBatchDeployment(
+        name=data["name"],
+        endpoint_name=data["endpoint_name"],
+        component=component_id,
+        settings=settings,
+    )
 
 
 def main() -> None:
@@ -59,12 +63,8 @@ def main() -> None:
     ml_client.batch_endpoints.begin_create_or_update(endpoint).result()
 
     print(f"Creating/updating batch deployment {config.endpoint.deployment} with {pipeline_component}")
-    rendered_deployment = _render_deployment_file(config.endpoint.deployment_file.path, pipeline_component)
-    try:
-        deployment = load_batch_deployment(rendered_deployment)
-        ml_client.batch_deployments.begin_create_or_update(deployment).result()
-    finally:
-        rendered_deployment.unlink(missing_ok=True)
+    deployment = _load_pipeline_deployment(config.endpoint.deployment_file.path, pipeline_component)
+    ml_client.batch_deployments.begin_create_or_update(deployment).result()
 
     print(f"Batch endpoint ready: {config.endpoint.name}/{config.endpoint.deployment}")
 

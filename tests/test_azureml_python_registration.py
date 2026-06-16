@@ -97,7 +97,7 @@ def test_deploy_endpoint_uses_python_sdk_batch_clients():
     source = DEPLOY_ENDPOINT.read_text(encoding="utf-8")
 
     assert "load_batch_endpoint" in source
-    assert "load_batch_deployment" in source
+    assert "PipelineComponentBatchDeployment" in source
     assert "ml_client.batch_endpoints.begin_create_or_update" in source
     assert "ml_client.batch_deployments.begin_create_or_update" in source
     assert "az ml batch-deployment create" not in source

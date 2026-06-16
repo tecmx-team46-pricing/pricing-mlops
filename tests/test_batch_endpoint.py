@@ -35,7 +35,7 @@ def test_deploy_script_promotes_manifest_pipeline_component():
     assert "scripts/azureml/deploy_endpoint.py" in deploy_script
     assert "AZURE_ML_RELEASE_CONFIG" in deploy_script
     assert "load_batch_endpoint" in deploy_python
-    assert "load_batch_deployment" in deploy_python
+    assert "PipelineComponentBatchDeployment" in deploy_python
     assert "azureml/manifests/auth-monitoring-release.json" not in deploy_script
     assert "az ml component show" not in deploy_script
     assert "az ml component create" not in deploy_script
