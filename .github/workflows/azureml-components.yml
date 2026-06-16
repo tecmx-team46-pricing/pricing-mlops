@@ -6,6 +6,8 @@ on:
       - main
     paths:
       - "azureml/components/**"
+      - "azureml/pipelines/**"
+      - "azureml/manifests/**"
       - "azureml/environment.yml"
       - "azureml/conda.yml"
       - "scripts/components/**"
@@ -42,3 +44,9 @@ jobs:
           AZURE_RESOURCE_GROUP: ${{ vars.AZURE_RESOURCE_GROUP }}
           AZURE_ML_WORKSPACE: ${{ vars.AZURE_ML_WORKSPACE }}
         run: scripts/register_azureml_components.sh
+
+      - name: Upload AUTH monitoring release manifest
+        uses: actions/upload-artifact@v4
+        with:
+          name: auth-monitoring-release
+          path: azureml/manifests/auth-monitoring-release.json

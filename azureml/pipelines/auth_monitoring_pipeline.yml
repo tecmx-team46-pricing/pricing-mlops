@@ -1,0 +1,160 @@
+$schema: https://azuremlschemas.azureedge.net/latest/pipelineComponent.schema.json
+type: pipeline
+name: pricing_mlops_auth_monitoring_pipeline
+version: 0.1.2
+display_name: Pricing MLOps AUTH monitoring pipeline component
+description: AUTH monitoring pipeline assembled from pricing-mlops components and platform-owned publishing.
+inputs:
+  storage_account:
+    type: string
+    default: mlopsstorageexample
+  environment:
+    type: string
+    default: staging
+  run_owner:
+    type: string
+    default: team46
+  run_id:
+    type: string
+    default: manual
+  input_blob_path:
+    type: string
+    default: samples/sample_pricing_v1.csv
+  baseline_snapshot_container:
+    type: string
+    default: artifacts
+  baseline_snapshot_blob_path:
+    type: string
+    default: ''
+  current_history_container:
+    type: string
+    default: raw-masked
+  current_history_blob_path:
+    type: string
+    default: samples/sample_pricing_v1.csv
+  trigger_type:
+    type: string
+    default: batch-endpoint
+  model_repo:
+    type: string
+    default: tecmx-team46-pricing/pricing-mlops
+  model_ref:
+    type: string
+    default: main
+  model_commit_sha:
+    type: string
+    default: unknown
+  monitoring_config_version:
+    type: string
+    default: '2026-05-07'
+  monitoring_config_path:
+    type: string
+    default: configs/drift_thresholds.json
+  job_identity_client_id:
+    type: string
+    default: ''
+jobs:
+  validate_prepare:
+    type: command
+    compute: azureml:serverless
+    component: azureml:pricing_mlops_validate_prepare:0.1.2
+    inputs:
+      storage_account: ${{parent.inputs.storage_account}}
+      input_blob_path: ${{parent.inputs.input_blob_path}}
+      run_id: ${{parent.inputs.run_id}}
+      job_identity_client_id: ${{parent.inputs.job_identity_client_id}}
+    outputs:
+      flow_token:
+        type: uri_folder
+    identity:
+      type: user_identity
+  build_monitoring_inputs:
+    type: command
+    compute: azureml:serverless
+    component: azureml:pricing_mlops_build_monitoring_inputs:0.1.2
+    inputs:
+      storage_account: ${{parent.inputs.storage_account}}
+      run_id: ${{parent.inputs.run_id}}
+      baseline_snapshot_container: ${{parent.inputs.baseline_snapshot_container}}
+      baseline_snapshot_blob_path: ${{parent.inputs.baseline_snapshot_blob_path}}
+      current_history_container: ${{parent.inputs.current_history_container}}
+      current_history_blob_path: ${{parent.inputs.current_history_blob_path}}
+      job_identity_client_id: ${{parent.inputs.job_identity_client_id}}
+      previous_step_token:
+        type: uri_folder
+        path: ${{parent.jobs.validate_prepare.outputs.flow_token}}
+    outputs:
+      flow_token:
+        type: uri_folder
+    identity:
+      type: user_identity
+  calculate_recommendation_validity:
+    type: command
+    compute: azureml:serverless
+    component: azureml:pricing_mlops_calculate_recommendation_validity:0.1.2
+    inputs:
+      storage_account: ${{parent.inputs.storage_account}}
+      run_id: ${{parent.inputs.run_id}}
+      job_identity_client_id: ${{parent.inputs.job_identity_client_id}}
+      previous_step_token:
+        type: uri_folder
+        path: ${{parent.jobs.build_monitoring_inputs.outputs.flow_token}}
+    outputs:
+      flow_token:
+        type: uri_folder
+    identity:
+      type: user_identity
+  calculate_auth_history_drift:
+    type: command
+    compute: azureml:serverless
+    component: azureml:pricing_mlops_calculate_auth_history_drift:0.1.2
+    inputs:
+      storage_account: ${{parent.inputs.storage_account}}
+      run_id: ${{parent.inputs.run_id}}
+      job_identity_client_id: ${{parent.inputs.job_identity_client_id}}
+      previous_step_token:
+        type: uri_folder
+        path: ${{parent.jobs.calculate_recommendation_validity.outputs.flow_token}}
+    outputs:
+      flow_token:
+        type: uri_folder
+    identity:
+      type: user_identity
+  calculate_operational_decision:
+    type: command
+    compute: azureml:serverless
+    component: azureml:pricing_mlops_calculate_operational_decision:0.1.2
+    inputs:
+      storage_account: ${{parent.inputs.storage_account}}
+      run_id: ${{parent.inputs.run_id}}
+      job_identity_client_id: ${{parent.inputs.job_identity_client_id}}
+      previous_step_token:
+        type: uri_folder
+        path: ${{parent.jobs.calculate_auth_history_drift.outputs.flow_token}}
+    outputs:
+      flow_token:
+        type: uri_folder
+    identity:
+      type: user_identity
+  publish_outputs:
+    type: command
+    compute: azureml:serverless
+    component: azureml:pricing_mlops_platform_publish_outputs:0.1.1
+    inputs:
+      storage_account: ${{parent.inputs.storage_account}}
+      run_id: ${{parent.inputs.run_id}}
+      environment: ${{parent.inputs.environment}}
+      run_owner: ${{parent.inputs.run_owner}}
+      input_blob_path: ${{parent.inputs.input_blob_path}}
+      trigger_type: ${{parent.inputs.trigger_type}}
+      model_repo: ${{parent.inputs.model_repo}}
+      model_ref: ${{parent.inputs.model_ref}}
+      model_commit_sha: ${{parent.inputs.model_commit_sha}}
+      monitoring_config_version: ${{parent.inputs.monitoring_config_version}}
+      monitoring_config_path: ${{parent.inputs.monitoring_config_path}}
+      job_identity_client_id: ${{parent.inputs.job_identity_client_id}}
+      previous_step_token:
+        type: uri_folder
+        path: ${{parent.jobs.calculate_operational_decision.outputs.flow_token}}
+    identity:
+      type: user_identity

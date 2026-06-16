@@ -73,7 +73,9 @@ def test_register_components_script_publishes_every_component():
     assert "AZURE_ML_WORKSPACE" in script
     assert "az ml environment create" in script
     assert "azureml/environment.yml" in script
+    assert "az ml component show" in script
     assert "az ml component create" in script
+    assert "already exists" in script
     for slug in EXPECTED_COMPONENTS:
         assert f"azureml/components/{slug}.yml" in script
 

@@ -28,6 +28,10 @@ Los entrypoints funcionales AUTH monitoring derivados del notebook Avance 4 vive
 - `calculate_auth_history_drift.py`
 - `calculate_operational_decision.py`
 
+El pipeline component completo vive en `azureml/pipelines/auth_monitoring_pipeline.yml` y se registra
+como `pricing_mlops_auth_monitoring_pipeline:<version>`. Ese pipeline compone los componentes
+funcionales de este repo y el componente de publicacion registrado por `pricing-mlops-platform`.
+
 La publicacion final vive en `pricing-mlops-platform/mlops/components/platform_publish_outputs.py`.
 
 La ruta AUTH monitoring no ejecuta el notebook completo; ejecuta componentes versionables y mantiene el notebook como referencia del analista.
