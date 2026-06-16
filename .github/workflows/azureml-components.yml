@@ -60,7 +60,6 @@ jobs:
         env:
           AZURE_RESOURCE_GROUP: ${{ vars.AZURE_RESOURCE_GROUP }}
           AZURE_ML_WORKSPACE: ${{ vars.AZURE_ML_WORKSPACE }}
-          AZURE_STORAGE_ACCOUNT: ${{ vars.AZURE_STORAGE_ACCOUNT }}
           AZURE_ML_JOB_IDENTITY_CLIENT_ID: ${{ vars.AZURE_ML_JOB_IDENTITY_CLIENT_ID }}
           AZURE_ML_WAIT_FOR_COMPLETION: "true"
         run: scripts/invoke_auth_monitoring_batch_endpoint.sh
