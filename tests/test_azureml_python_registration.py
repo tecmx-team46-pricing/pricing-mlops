@@ -10,6 +10,10 @@ ROOT = Path(__file__).resolve().parents[1]
 CONFIG_FILE = ROOT / "configs" / "azureml_auth_monitoring.yml"
 MANIFEST_FILE = ROOT / "azureml" / "manifests" / "auth-monitoring-release.json"
 WORKFLOW_FILE = ROOT / ".github" / "workflows" / "azureml-components.yml"
+REGISTER_ASSETS = ROOT / "scripts" / "azureml" / "register_assets.py"
+REGISTER_WRAPPER = ROOT / "scripts" / "register_azureml_components.sh"
+DEPLOY_ENDPOINT = ROOT / "scripts" / "azureml" / "deploy_endpoint.py"
+DEPLOY_WRAPPER = ROOT / "scripts" / "deploy_auth_monitoring_batch_endpoint.sh"
 
 
 def test_azureml_release_config_lists_existing_assets():
@@ -67,3 +71,39 @@ def test_azureml_settings_uses_env_overrides(monkeypatch):
     assert settings.subscription_id == "sub-from-env"
     assert settings.resource_group == "rg-from-env"
     assert settings.workspace == "workspace-from-env"
+
+
+def test_register_assets_uses_python_sdk_loaders():
+    source = REGISTER_ASSETS.read_text(encoding="utf-8")
+
+    assert "load_component" in source
+    assert "load_environment" in source
+    assert "ml_client.components.create_or_update" in source
+    assert "ml_client.environments.create_or_update" in source
+    assert "az ml component create" not in source
+
+
+def test_register_shell_wrapper_delegates_to_python():
+    source = REGISTER_WRAPPER.read_text(encoding="utf-8")
+
+    assert "python" in source
+    assert "scripts/azureml/register_assets.py" in source
+    assert "az ml component create" not in source
+
+
+def test_deploy_endpoint_uses_python_sdk_batch_clients():
+    source = DEPLOY_ENDPOINT.read_text(encoding="utf-8")
+
+    assert "load_batch_endpoint" in source
+    assert "load_batch_deployment" in source
+    assert "ml_client.batch_endpoints.begin_create_or_update" in source
+    assert "ml_client.batch_deployments.begin_create_or_update" in source
+    assert "az ml batch-deployment create" not in source
+
+
+def test_deploy_shell_wrapper_delegates_to_python():
+    source = DEPLOY_WRAPPER.read_text(encoding="utf-8")
+
+    assert "python" in source
+    assert "scripts/azureml/deploy_endpoint.py" in source
+    assert "az ml batch-deployment create" not in source

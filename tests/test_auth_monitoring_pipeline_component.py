@@ -8,6 +8,7 @@ ROOT = Path(__file__).resolve().parents[1]
 PIPELINE_FILE = ROOT / "azureml" / "pipelines" / "auth_monitoring_pipeline.yml"
 RELEASE_MANIFEST = ROOT / "azureml" / "manifests" / "auth-monitoring-release.json"
 REGISTER_SCRIPT = ROOT / "scripts" / "register_azureml_components.sh"
+REGISTER_ASSETS = ROOT / "scripts" / "azureml" / "register_assets.py"
 WORKFLOW_FILE = ROOT / ".github" / "workflows" / "azureml-components.yml"
 
 PIPELINE_VERSION = "0.1.8"
@@ -74,19 +75,22 @@ def test_auth_monitoring_release_manifest_matches_pipeline_component():
 
 def test_register_script_and_workflow_publish_pipeline_component():
     script = REGISTER_SCRIPT.read_text(encoding="utf-8")
+    register_python = REGISTER_ASSETS.read_text(encoding="utf-8")
     workflow = yaml.safe_load(WORKFLOW_FILE.read_text(encoding="utf-8"))
     triggers = workflow[True]
     push = triggers["push"]
     steps = workflow["jobs"]["register-components"]["steps"]
     step_text = "\n".join(str(step) for step in steps)
 
-    assert "azureml/pipelines/auth_monitoring_pipeline.yml" in script
-    assert 'register_component_file "${component_file}" "pipeline component"' in script
+    assert "scripts/azureml/register_assets.py" in script
+    assert "AZURE_ML_RELEASE_CONFIG" in script
+    assert "config.pipeline.path" in register_python
+    assert "ml_client.components.create_or_update" in register_python
     assert "azureml/pipelines/**" in push["paths"]
     assert "azureml/manifests/**" in push["paths"]
     assert "src/pricing/auth_monitoring/**" in push["paths"]
     assert "src/pricing_mlops/monitoring/pipeline/**" in push["paths"]
-    assert "scripts/deploy_auth_monitoring_batch_endpoint.sh" in step_text
+    assert "python scripts/azureml/deploy_endpoint.py" in step_text
     assert "scripts/invoke_auth_monitoring_batch_endpoint.sh" not in step_text
     assert "actions/upload-artifact@v4" in step_text
     assert "auth-monitoring-release.json" in step_text

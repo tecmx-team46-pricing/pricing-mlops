@@ -14,6 +14,8 @@ on:
       - "scripts/components/**"
       - "src/pricing/auth_monitoring/**"
       - "src/pricing_mlops/monitoring/pipeline/**"
+      - "configs/azureml_auth_monitoring.yml"
+      - "scripts/azureml/**"
       - "scripts/deploy_auth_monitoring_batch_endpoint.sh"
       - "scripts/register_azureml_components.sh"
       - ".github/workflows/azureml-components.yml"
@@ -38,22 +40,24 @@ jobs:
           tenant-id: ${{ vars.AZURE_TENANT_ID }}
           subscription-id: ${{ vars.AZURE_SUBSCRIPTION_ID }}
 
-      - name: Install Azure ML CLI extension
+      - name: Install Azure ML Python dependencies
         run: |
-          az extension add --name ml --yes || az extension update --name ml
+          python -m pip install --upgrade pip
+          python -m pip install "azure-ai-ml>=1.32.0" "azure-identity>=1.17.0" "pyyaml>=6.0"
 
       - name: Register Azure ML components
         env:
           AZURE_SUBSCRIPTION_ID: ${{ vars.AZURE_SUBSCRIPTION_ID }}
           AZURE_RESOURCE_GROUP: ${{ vars.AZURE_RESOURCE_GROUP }}
           AZURE_ML_WORKSPACE: ${{ vars.AZURE_ML_WORKSPACE }}
-        run: scripts/register_azureml_components.sh
+        run: python scripts/azureml/register_assets.py --config configs/azureml_auth_monitoring.yml
 
       - name: Deploy AUTH monitoring batch endpoint
         env:
+          AZURE_SUBSCRIPTION_ID: ${{ vars.AZURE_SUBSCRIPTION_ID }}
           AZURE_RESOURCE_GROUP: ${{ vars.AZURE_RESOURCE_GROUP }}
           AZURE_ML_WORKSPACE: ${{ vars.AZURE_ML_WORKSPACE }}
-        run: scripts/deploy_auth_monitoring_batch_endpoint.sh
+        run: python scripts/azureml/deploy_endpoint.py --config configs/azureml_auth_monitoring.yml
 
       - name: Upload AUTH monitoring release manifest
         uses: actions/upload-artifact@v4

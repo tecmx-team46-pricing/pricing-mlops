@@ -6,6 +6,8 @@ import yaml
 ROOT = Path(__file__).resolve().parents[1]
 COMPONENT_DIR = ROOT / "azureml" / "components"
 REGISTER_SCRIPT = ROOT / "scripts" / "register_azureml_components.sh"
+REGISTER_ASSETS = ROOT / "scripts" / "azureml" / "register_assets.py"
+RELEASE_CONFIG = ROOT / "configs" / "azureml_auth_monitoring.yml"
 AMLIGNORE = ROOT / ".amlignore"
 COMPONENT_VERSION = "0.1.2"
 MONITORING_COMPONENT_VERSION = "0.1.3"
@@ -95,18 +97,19 @@ def test_azureml_component_specs_are_registered_units():
 
 
 def test_register_components_script_publishes_every_component():
-    script = REGISTER_SCRIPT.read_text(encoding="utf-8")
+    wrapper = REGISTER_SCRIPT.read_text(encoding="utf-8")
+    script = REGISTER_ASSETS.read_text(encoding="utf-8")
+    config = yaml.safe_load(RELEASE_CONFIG.read_text(encoding="utf-8"))
 
-    assert "AZURE_SUBSCRIPTION_ID" in script
-    assert "AZURE_RESOURCE_GROUP" in script
-    assert "AZURE_ML_WORKSPACE" in script
-    assert "az ml environment create" in script
-    assert "azureml/environment.yml" in script
-    assert "az ml component show" in script
-    assert "az ml component create" in script
-    assert "already exists" in script
+    assert "scripts/azureml/register_assets.py" in wrapper
+    assert "AZURE_ML_RELEASE_CONFIG" in wrapper
+    assert "load_environment" in script
+    assert "load_component" in script
+    assert "ml_client.environments.create_or_update" in script
+    assert "ml_client.components.create_or_update" in script
+    assert "azureml/environment.yml" == config["environment"]
     for slug in EXPECTED_COMPONENTS:
-        assert f"azureml/components/{slug}.yml" in script
+        assert f"azureml/components/{slug}.yml" in config["components"]
 
 
 def test_runtime_environment_spec_is_versioned_in_model_repo():
@@ -152,5 +155,6 @@ def test_model_repo_registers_components_from_github_actions():
     assert workflow["permissions"] == {"contents": "read", "id-token": "write"}
     assert workflow["jobs"]["register-components"]["environment"] == "staging"
     assert "azure/login@v2" in step_text
-    assert "scripts/register_azureml_components.sh" in step_text
+    assert "scripts/register_azureml_components.sh" in push["paths"]
+    assert "python scripts/azureml/register_assets.py" in step_text
     assert "scripts/invoke_auth_monitoring_batch_endpoint.sh" not in step_text
