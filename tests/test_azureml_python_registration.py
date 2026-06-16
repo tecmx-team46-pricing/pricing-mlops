@@ -78,6 +78,8 @@ def test_register_assets_uses_python_sdk_loaders():
 
     assert "load_component" in source
     assert "load_environment" in source
+    assert "ml_client.components.get" in source
+    assert "already exists" in source
     assert "ml_client.components.create_or_update" in source
     assert "ml_client.environments.create_or_update" in source
     assert "az ml component create" not in source
