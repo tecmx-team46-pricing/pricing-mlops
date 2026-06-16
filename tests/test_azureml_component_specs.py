@@ -18,7 +18,7 @@ EXPECTED_COMPONENTS = {
     },
     "build_monitoring_inputs": {
         "name": "pricing_mlops_build_monitoring_inputs",
-        "entrypoint": "scripts/components/build_monitoring_inputs.py",
+        "step": "build_monitoring_inputs",
         "inputs": {
             "storage_account",
             "run_id",
@@ -32,17 +32,17 @@ EXPECTED_COMPONENTS = {
     },
     "calculate_recommendation_validity": {
         "name": "pricing_mlops_calculate_recommendation_validity",
-        "entrypoint": "scripts/components/calculate_recommendation_validity.py",
+        "step": "calculate_recommendation_validity",
         "inputs": {"storage_account", "run_id", "job_identity_client_id", "previous_step_token"},
     },
     "calculate_auth_history_drift": {
         "name": "pricing_mlops_calculate_auth_history_drift",
-        "entrypoint": "scripts/components/calculate_auth_history_drift.py",
+        "step": "calculate_auth_history_drift",
         "inputs": {"storage_account", "run_id", "job_identity_client_id", "previous_step_token"},
     },
     "calculate_operational_decision": {
         "name": "pricing_mlops_calculate_operational_decision",
-        "entrypoint": "scripts/components/calculate_operational_decision.py",
+        "step": "calculate_operational_decision",
         "inputs": {"storage_account", "run_id", "job_identity_client_id", "previous_step_token"},
     },
     "publish_outputs": {
@@ -84,7 +84,11 @@ def test_azureml_component_specs_are_registered_units():
             assert "outputs" not in component or component["outputs"] in ({}, None)
         assert "MLOPS_USE_MANAGED_IDENTITY_CREDENTIAL=true" in component["command"]
         assert "AZURE_ML_JOB_IDENTITY_CLIENT_ID=${{inputs.job_identity_client_id}}" in component["command"]
-        assert expected["entrypoint"] in component["command"]
+        if "step" in expected:
+            assert "python scripts/components/run_monitoring_step.py" in component["command"]
+            assert f"--step {expected['step']}" in component["command"]
+        else:
+            assert expected["entrypoint"] in component["command"]
         assert "pip install" not in component["command"]
 
 

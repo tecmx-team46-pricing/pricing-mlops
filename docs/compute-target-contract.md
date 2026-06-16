@@ -16,11 +16,13 @@ El pipeline visible se compone de:
 | Componente | Entrypoint | Salida principal |
 |---|---|---|
 | `pricing_mlops_validate_prepare` | `scripts/components/validate_prepare.py` | `curated_input.csv`, `validation_metadata.json` |
-| `pricing_mlops_build_monitoring_inputs` | `scripts/components/build_monitoring_inputs.py` | Snapshots normalizados para monitoreo |
-| `pricing_mlops_calculate_recommendation_validity` | `scripts/components/calculate_recommendation_validity.py` | Logs y summaries de validez de recomendacion |
-| `pricing_mlops_calculate_auth_history_drift` | `scripts/components/calculate_auth_history_drift.py` | Drift AUTH history y reporte markdown |
-| `pricing_mlops_calculate_operational_decision` | `scripts/components/calculate_operational_decision.py` | Semaforo operacional y manifest final |
+| `pricing_mlops_build_monitoring_inputs` | `scripts/components/run_monitoring_step.py --step build_monitoring_inputs` | Snapshots normalizados para monitoreo |
+| `pricing_mlops_calculate_recommendation_validity` | `scripts/components/run_monitoring_step.py --step calculate_recommendation_validity` | Logs y summaries de validez de recomendacion |
+| `pricing_mlops_calculate_auth_history_drift` | `scripts/components/run_monitoring_step.py --step calculate_auth_history_drift` | Drift AUTH history y reporte markdown |
+| `pricing_mlops_calculate_operational_decision` | `scripts/components/run_monitoring_step.py --step calculate_operational_decision` | Semaforo operacional y manifest final |
 | `pricing_mlops_publish_outputs` | `scripts/components/publish_outputs.py` | Blobs finales en Storage MLOps |
+
+Los cuatro componentes de monitoreo comparten el mismo entrypoint. La diferencia entre ellos vive en `src/pricing_mlops/monitoring/pipeline/registry.py`, que define el slug del step, el componente Azure ML, las carpetas de entrada/salida y los bindings de Storage intermedio.
 
 Inputs principales:
 

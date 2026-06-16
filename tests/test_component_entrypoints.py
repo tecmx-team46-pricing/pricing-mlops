@@ -1,5 +1,6 @@
 import json
 
+from pricing_mlops.monitoring.pipeline.registry import get_monitoring_step, monitoring_step_slugs
 from scripts.components.validate_prepare import prepare_local_input
 from pricing.auth_monitoring import expected_auth_monitoring_artifacts, validate_expected_monitoring_artifacts
 from pricing_mlops.monitoring.pipeline.steps.auth_history_drift_step import run_auth_history_drift_step
@@ -33,6 +34,26 @@ def test_validate_prepare_writes_curated_input_and_metadata(tmp_path):
     assert metadata["row_count"] == 1
     assert metadata["validation_status"] == "passed"
     assert "current_price" in curated
+
+
+def test_monitoring_step_registry_defines_azureml_owned_steps():
+    assert monitoring_step_slugs() == (
+        "build_monitoring_inputs",
+        "calculate_recommendation_validity",
+        "calculate_auth_history_drift",
+        "calculate_operational_decision",
+    )
+
+    definition = get_monitoring_step("calculate_operational_decision")
+
+    assert definition.slug == "calculate_operational_decision"
+    assert definition.component_name == "pricing_mlops_calculate_operational_decision"
+    assert definition.input_dir == "outputs/auth_history_drift"
+    assert definition.output_dir == "outputs/operational_decision"
+    assert definition.state_container_arg == "validity_container"
+    assert definition.state_prefix_arg == "validity_prefix"
+    assert definition.publish_container_arg == "decision_container"
+    assert definition.publish_prefix_arg == "decision_prefix"
 
 
 def test_monitoring_components_write_step_artifacts(tmp_path):

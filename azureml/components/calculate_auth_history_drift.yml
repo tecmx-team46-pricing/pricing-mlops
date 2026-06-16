@@ -22,7 +22,8 @@ command: >-
   test -f ${{inputs.previous_step_token}}/done.txt &&
   MLOPS_USE_MANAGED_IDENTITY_CREDENTIAL=true
   AZURE_ML_JOB_IDENTITY_CLIENT_ID=${{inputs.job_identity_client_id}}
-  python scripts/components/calculate_auth_history_drift.py
+  python scripts/components/run_monitoring_step.py
+  --step calculate_auth_history_drift
   --input-dir outputs/recommendation_validity
   --output-dir outputs/auth_history_drift
   --run-id ${{inputs.run_id}}

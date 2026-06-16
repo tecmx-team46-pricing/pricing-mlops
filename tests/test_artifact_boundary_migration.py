@@ -13,8 +13,9 @@ def test_domain_and_component_code_do_not_import_artifact_publishing():
     repo_root = Path(__file__).resolve().parents[1]
     checked_paths = [
         *sorted((repo_root / "src/pricing_mlops/preparation").glob("*.py")),
+        repo_root / "src/pricing_mlops/monitoring/pipeline/registry.py",
         repo_root / "scripts/components/validate_prepare.py",
-        repo_root / "scripts/components/calculate_operational_decision.py",
+        repo_root / "scripts/components/run_monitoring_step.py",
     ]
 
     violations = [

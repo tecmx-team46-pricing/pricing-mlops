@@ -38,11 +38,14 @@ pricing.auth_monitoring
 pricing_mlops.monitoring.pipeline.steps
   = runtime operacional que lee/escribe carpetas del pipeline
 
+pricing_mlops.monitoring.pipeline.registry
+  = definicion unica de los steps de monitoreo que Azure ML puede ejecutar
+
 scripts/components
-  = entrypoints Azure ML delgados
+  = entrypoints Azure ML delgados; monitoreo usa run_monitoring_step.py
 ```
 
-El notebook debe consumir `pricing.auth_monitoring` para calculos y configuracion. Los componentes Azure ML deben consumir `pricing_mlops.monitoring.pipeline.steps`.
+El notebook debe consumir `pricing.auth_monitoring` para calculos y configuracion. Los componentes Azure ML de monitoreo deben entrar por `scripts/components/run_monitoring_step.py`, resolver el step desde `pricing_mlops.monitoring.pipeline.registry` y ejecutar `pricing_mlops.monitoring.pipeline.steps`.
 
 No se mantienen wrappers legacy para config, artifact contract, reglas derivadas del notebook ni steps fuera de `pipeline.steps`.
 

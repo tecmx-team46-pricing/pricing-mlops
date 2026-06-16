@@ -30,7 +30,8 @@ command: >-
   test -f ${{inputs.previous_step_token}}/done.txt &&
   MLOPS_USE_MANAGED_IDENTITY_CREDENTIAL=true
   AZURE_ML_JOB_IDENTITY_CLIENT_ID=${{inputs.job_identity_client_id}}
-  python scripts/components/build_monitoring_inputs.py
+  python scripts/components/run_monitoring_step.py
+  --step build_monitoring_inputs
   --baseline-snapshot-path outputs/_downloaded/baseline_recommendation_snapshot.csv
   --current-history-path outputs/_downloaded/current_auth_history_snapshot_real.csv
   --output-dir outputs/monitoring_inputs

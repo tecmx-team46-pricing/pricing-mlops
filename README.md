@@ -23,11 +23,13 @@ Componentes Azure ML versionados:
 | Componente | Entrypoint | Responsabilidad |
 |---|---|---|
 | `pricing_mlops_validate_prepare` | `scripts/components/validate_prepare.py` | Descarga el CSV masked, valida y genera curated intermedio. |
-| `pricing_mlops_build_monitoring_inputs` | `scripts/components/build_monitoring_inputs.py` | Prepara snapshots de baseline y current history para monitoreo. |
-| `pricing_mlops_calculate_recommendation_validity` | `scripts/components/calculate_recommendation_validity.py` | Calcula validez de recomendaciones y summaries derivados del notebook. |
-| `pricing_mlops_calculate_auth_history_drift` | `scripts/components/calculate_auth_history_drift.py` | Calcula drift AUTH history contra baseline. |
-| `pricing_mlops_calculate_operational_decision` | `scripts/components/calculate_operational_decision.py` | Produce decision operacional, semaforo y manifest final. |
+| `pricing_mlops_build_monitoring_inputs` | `scripts/components/run_monitoring_step.py --step build_monitoring_inputs` | Prepara snapshots de baseline y current history para monitoreo. |
+| `pricing_mlops_calculate_recommendation_validity` | `scripts/components/run_monitoring_step.py --step calculate_recommendation_validity` | Calcula validez de recomendaciones y summaries derivados del notebook. |
+| `pricing_mlops_calculate_auth_history_drift` | `scripts/components/run_monitoring_step.py --step calculate_auth_history_drift` | Calcula drift AUTH history contra baseline. |
+| `pricing_mlops_calculate_operational_decision` | `scripts/components/run_monitoring_step.py --step calculate_operational_decision` | Produce decision operacional, semaforo y manifest final. |
 | `pricing_mlops_publish_outputs` | `scripts/components/publish_outputs.py` | Publica artefactos finales al layout operacional de Storage. |
+
+Los steps de monitoreo se declaran en `src/pricing_mlops/monitoring/pipeline/registry.py` y ejecutan logica reusable de `src/pricing_mlops/monitoring/pipeline/steps/`. Asi Azure ML usa un wrapper comun, pero la logica versionable queda en modulos testeables.
 
 El notebook original queda como referencia del analista. La copia `notebooks/eda/auth_recommendation_monitoring_pipeline_abstraction.ipynb` es transicional para reemplazar logica inline por modulos.
 
