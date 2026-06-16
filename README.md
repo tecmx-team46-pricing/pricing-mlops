@@ -51,6 +51,7 @@ No hay API de compatibilidad bajo `pricing_mlops.monitoring` para reglas, config
 El flujo automatico lo dispara plataforma con Event Grid sobre `raw-masked/incoming/*.csv`. Este repo no contiene Event Grid, Function App ni IaC.
 
 GitHub Actions en este repo solo se usa para CI funcional. La operacion Azure del flujo vive en `pricing-mlops-platform`.
+Los YAMLs bajo `azureml/components/` definen los componentes funcionales versionados que plataforma referencia desde su pipeline; el script `scripts/register_azureml_components.sh` los registra manualmente en el workspace objetivo cuando se promueve una version.
 
 ## Instalacion
 
@@ -133,6 +134,7 @@ SQL es metadata-only. Los CSVs y reportes siguen en Blob Storage. La conexion y 
 - No account keys ni connection strings.
 - No infraestructura desde este repo.
 - No runtime Azure Functions ni YAML de pipeline/job AML en este repo; viven en `pricing-mlops-platform/mlops/`.
+- No workflows de operacion Azure; este repo solo versiona specs de componentes AML y un script manual de registro.
 - No scripts de publicacion u operacion de Azure Function en este repo; usar `pricing-mlops-platform/mlops/scripts/`.
 - No ejecutar notebooks completos como runtime operacional principal; Azure ML debe usar componentes versionables.
 - No Container Apps/Docker como ruta activa.
