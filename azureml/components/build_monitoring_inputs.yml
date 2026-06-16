@@ -1,7 +1,7 @@
 $schema: https://azuremlschemas.azureedge.net/latest/commandComponent.schema.json
 type: command
 name: pricing_mlops_build_monitoring_inputs
-version: 0.1.1
+version: 0.1.2
 display_name: build_monitoring_inputs
 description: Build normalized baseline and current AUTH monitoring inputs.
 code: ../..

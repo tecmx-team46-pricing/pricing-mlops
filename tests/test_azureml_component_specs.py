@@ -7,7 +7,7 @@ ROOT = Path(__file__).resolve().parents[1]
 COMPONENT_DIR = ROOT / "azureml" / "components"
 REGISTER_SCRIPT = ROOT / "scripts" / "register_azureml_components.sh"
 AMLIGNORE = ROOT / ".amlignore"
-COMPONENT_VERSION = "0.1.1"
+COMPONENT_VERSION = "0.1.2"
 RUNTIME_ENVIRONMENT = "azureml:pricing-mlops-runtime:0.1.0"
 
 EXPECTED_COMPONENTS = {
