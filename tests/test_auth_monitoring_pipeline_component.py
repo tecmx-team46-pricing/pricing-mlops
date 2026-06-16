@@ -10,7 +10,7 @@ RELEASE_MANIFEST = ROOT / "azureml" / "manifests" / "auth-monitoring-release.jso
 REGISTER_SCRIPT = ROOT / "scripts" / "register_azureml_components.sh"
 WORKFLOW_FILE = ROOT / ".github" / "workflows" / "azureml-components.yml"
 
-PIPELINE_VERSION = "0.1.4"
+PIPELINE_VERSION = "0.1.7"
 FUNCTIONAL_COMPONENT_VERSION = "0.1.2"
 MONITORING_COMPONENT_VERSION = "0.1.3"
 PUBLISH_COMPONENT = "azureml:pricing_mlops_publish_outputs:0.1.2"
@@ -40,7 +40,7 @@ def test_auth_monitoring_pipeline_component_composes_registered_components():
         else:
             component_name, component_version = component, MONITORING_COMPONENT_VERSION
         job = pipeline["jobs"][job_name]
-        assert job["compute"] == "azureml:serverless"
+        assert job["compute"] == "azureml:cpu-cluster"
         assert job["component"] == f"azureml:{component_name}:{component_version}"
         assert job["identity"] == {"type": "user_identity"}
 

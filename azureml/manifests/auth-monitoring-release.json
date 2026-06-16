@@ -1,7 +1,7 @@
 {
-  "release": "auth-monitoring-0.1.4",
+  "release": "auth-monitoring-0.1.7",
   "owner_repo": "tecmx-team46-pricing/pricing-mlops",
-  "pipeline_component": "azureml:pricing_mlops_auth_monitoring_pipeline:0.1.4",
+  "pipeline_component": "azureml:pricing_mlops_auth_monitoring_pipeline:0.1.7",
   "components": {
     "validate_prepare": "azureml:pricing_mlops_validate_prepare:0.1.2",
     "build_monitoring_inputs": "azureml:pricing_mlops_build_monitoring_inputs:0.1.3",
