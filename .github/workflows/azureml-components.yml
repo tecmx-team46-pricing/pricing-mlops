@@ -18,12 +18,6 @@ on:
       - "scripts/register_azureml_components.sh"
       - ".github/workflows/azureml-components.yml"
   workflow_dispatch:
-    inputs:
-      run_smoke:
-        description: "Invoke the AUTH monitoring batch endpoint after deploy"
-        required: false
-        default: false
-        type: boolean
 
 permissions:
   contents: read
@@ -60,15 +54,6 @@ jobs:
           AZURE_RESOURCE_GROUP: ${{ vars.AZURE_RESOURCE_GROUP }}
           AZURE_ML_WORKSPACE: ${{ vars.AZURE_ML_WORKSPACE }}
         run: scripts/deploy_auth_monitoring_batch_endpoint.sh
-
-      - name: Invoke AUTH monitoring smoke test
-        if: ${{ github.event_name == 'workflow_dispatch' && inputs.run_smoke }}
-        env:
-          AZURE_RESOURCE_GROUP: ${{ vars.AZURE_RESOURCE_GROUP }}
-          AZURE_ML_WORKSPACE: ${{ vars.AZURE_ML_WORKSPACE }}
-          AZURE_ML_JOB_IDENTITY_CLIENT_ID: ${{ vars.AZURE_ML_JOB_IDENTITY_CLIENT_ID }}
-          AZURE_ML_WAIT_FOR_COMPLETION: "true"
-        run: scripts/invoke_auth_monitoring_batch_endpoint.sh
 
       - name: Upload AUTH monitoring release manifest
         uses: actions/upload-artifact@v4

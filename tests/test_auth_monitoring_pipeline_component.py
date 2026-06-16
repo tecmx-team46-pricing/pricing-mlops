@@ -87,7 +87,6 @@ def test_register_script_and_workflow_publish_pipeline_component():
     assert "src/pricing/auth_monitoring/**" in push["paths"]
     assert "src/pricing_mlops/monitoring/pipeline/**" in push["paths"]
     assert "scripts/deploy_auth_monitoring_batch_endpoint.sh" in step_text
-    assert "scripts/invoke_auth_monitoring_batch_endpoint.sh" in step_text
-    assert "github.event_name == 'workflow_dispatch' && inputs.run_smoke" in step_text
+    assert "scripts/invoke_auth_monitoring_batch_endpoint.sh" not in step_text
     assert "actions/upload-artifact@v4" in step_text
     assert "auth-monitoring-release.json" in step_text
