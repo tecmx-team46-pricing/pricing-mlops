@@ -131,7 +131,7 @@ write_artifact_manifest(...)
 validate_expected_monitoring_artifacts(...)
 ```
 
-La publicacion final a Storage, SQL, Azure ML tags u otros sinks pertenece a `pricing-mlops-platform`.
+La publicacion final a Storage ocurre en `pricing_mlops_publish_outputs`, dentro de este repo. Platform solo provee Storage, workspace, identidad y RBAC base.
 
 ## Checklist Para Cambios
 
