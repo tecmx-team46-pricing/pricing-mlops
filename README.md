@@ -75,8 +75,11 @@ AZURE_RESOURCE_GROUP=<resource-group> \
 AZURE_ML_WORKSPACE=<workspace> \
 AZURE_STORAGE_ACCOUNT=<storage-account> \
 AZURE_ML_JOB_IDENTITY_CLIENT_ID=<client-id> \
+AZURE_ML_WAIT_FOR_COMPLETION=true \
 scripts/invoke_auth_monitoring_batch_endpoint.sh
 ```
+
+GitHub Actions registra componentes y actualiza el batch endpoint. La invocacion smoke se deja como validacion local porque crea un job real de Azure ML y puede tardar varios minutos.
 
 ## Outputs
 

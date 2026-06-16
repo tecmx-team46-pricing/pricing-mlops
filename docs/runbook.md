@@ -36,8 +36,11 @@ AZURE_RESOURCE_GROUP=<resource-group> \
 AZURE_ML_WORKSPACE=<workspace> \
 AZURE_STORAGE_ACCOUNT=<storage-account> \
 AZURE_ML_JOB_IDENTITY_CLIENT_ID=<client-id> \
+AZURE_ML_WAIT_FOR_COMPLETION=true \
 scripts/invoke_auth_monitoring_batch_endpoint.sh
 ```
+
+Este paso no corre en GitHub Actions por defecto. GitHub publica el pipeline/endpoint; el smoke se ejecuta localmente cuando se necesita validar el runtime completo de Azure ML.
 
 El resultado imprime:
 

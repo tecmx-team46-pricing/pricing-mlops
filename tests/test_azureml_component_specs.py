@@ -148,8 +148,9 @@ def test_model_repo_registers_components_from_github_actions():
     assert "azureml/endpoints/**" in push["paths"]
     assert "scripts/register_azureml_components.sh" in push["paths"]
     assert "scripts/deploy_auth_monitoring_batch_endpoint.sh" in push["paths"]
-    assert "scripts/invoke_auth_monitoring_batch_endpoint.sh" in push["paths"]
+    assert "scripts/invoke_auth_monitoring_batch_endpoint.sh" not in push["paths"]
     assert workflow["permissions"] == {"contents": "read", "id-token": "write"}
     assert workflow["jobs"]["register-components"]["environment"] == "staging"
     assert "azure/login@v2" in step_text
     assert "scripts/register_azureml_components.sh" in step_text
+    assert "scripts/invoke_auth_monitoring_batch_endpoint.sh" not in step_text
