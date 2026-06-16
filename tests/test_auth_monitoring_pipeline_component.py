@@ -10,7 +10,7 @@ RELEASE_MANIFEST = ROOT / "azureml" / "manifests" / "auth-monitoring-release.jso
 REGISTER_SCRIPT = ROOT / "scripts" / "register_azureml_components.sh"
 WORKFLOW_FILE = ROOT / ".github" / "workflows" / "azureml-components.yml"
 
-PIPELINE_VERSION = "0.1.7"
+PIPELINE_VERSION = "0.1.8"
 FUNCTIONAL_COMPONENT_VERSION = "0.1.2"
 MONITORING_COMPONENT_VERSION = "0.1.3"
 PUBLISH_COMPONENT = "azureml:pricing_mlops_publish_outputs:0.1.2"
@@ -42,11 +42,11 @@ def test_auth_monitoring_pipeline_component_composes_registered_components():
         job = pipeline["jobs"][job_name]
         assert job["compute"] == "azureml:cpu-cluster"
         assert job["component"] == f"azureml:{component_name}:{component_version}"
-        assert job["identity"] == {"type": "user_identity"}
+        assert job["identity"] == {"type": "managed_identity"}
 
     publish_job = pipeline["jobs"]["publish_outputs"]
     assert publish_job["component"] == PUBLISH_COMPONENT
-    assert publish_job["identity"] == {"type": "user_identity"}
+    assert publish_job["identity"] == {"type": "managed_identity"}
     assert (
         publish_job["inputs"]["previous_step_token"]["path"]
         == "${{parent.jobs.calculate_operational_decision.outputs.flow_token}}"
@@ -87,6 +87,7 @@ def test_register_script_and_workflow_publish_pipeline_component():
     assert "src/pricing/auth_monitoring/**" in push["paths"]
     assert "src/pricing_mlops/monitoring/pipeline/**" in push["paths"]
     assert "scripts/deploy_auth_monitoring_batch_endpoint.sh" in step_text
-    assert "scripts/invoke_auth_monitoring_batch_endpoint.sh" not in step_text
+    assert "scripts/invoke_auth_monitoring_batch_endpoint.sh" in step_text
+    assert "github.event_name == 'workflow_dispatch' && inputs.run_smoke" in step_text
     assert "actions/upload-artifact@v4" in step_text
     assert "auth-monitoring-release.json" in step_text

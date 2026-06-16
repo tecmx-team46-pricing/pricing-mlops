@@ -21,7 +21,7 @@ def test_auth_monitoring_batch_endpoint_targets_repo_owned_pipeline_component():
     assert deployment["name"] == "blue"
     assert deployment["type"] == "pipeline"
     assert deployment["component"] == manifest["pipeline_component"]
-    assert deployment["component"] == "azureml:pricing_mlops_auth_monitoring_pipeline:0.1.7"
+    assert deployment["component"] == "azureml:pricing_mlops_auth_monitoring_pipeline:0.1.8"
     assert deployment["settings"]["default_compute"] == "cpu-cluster"
     assert deployment["settings"]["continue_on_step_failure"] is False
 
