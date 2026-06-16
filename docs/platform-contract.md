@@ -11,7 +11,7 @@ Este repo no crea Resource Groups, Storage Accounts, RBAC, Key Vault, Azure ML W
 Ruta operativa:
 
 ```text
-pricing-mlops-platform/mlops/scripts/run_model_flow_function.sh
+pricing-mlops-platform
 -> Azure Function /api/model-flow
 -> Azure ML pipeline AUTH monitoring
 -> snapshot de este repo
@@ -34,27 +34,9 @@ La ruta AUTH monitoring no ejecuta el notebook completo; ejecuta componentes ver
 
 ## Inputs De Plataforma
 
-```text
-AZURE_SUBSCRIPTION_ID
-AZURE_TENANT_ID
-AZURE_RESOURCE_GROUP
-AZURE_STORAGE_ACCOUNT
-AZURE_ML_WORKSPACE
-AZURE_FUNCTION_APP
-MLOPS_CONTAINER_RAW_MASKED
-MLOPS_CONTAINER_CURATED
-MLOPS_CONTAINER_RUNS
-MLOPS_CONTAINER_SNAPSHOTS
-MLOPS_CONTAINER_DRIFT_LOGS
-MLOPS_CONTAINER_REPORTS
-MLOPS_CONTAINER_ARTIFACTS
-```
+Los nombres de recursos Azure, credenciales, variables de ambiente, Function App, Workspace Azure ML y containers finales se definen y validan en `pricing-mlops-platform`.
 
-GitHub Actions tambien requiere `AZURE_CLIENT_ID` para OIDC. La operacion local usa el usuario autenticado con `az login`.
-
-`AZURE_STORAGE_ACCOUNT` es el Storage MLOps funcional. No apunta al Storage runtime interno de Azure ML ni al Storage host de Azure Functions.
-
-En `staging`, `AZURE_ML_WORKSPACE` apunta al workspace activo `mlw-pricing-mlops-stg-v2-<suffix>`, cuyo storage asociado es el Storage runtime Azure ML. Los outputs funcionales siguen usando `AZURE_STORAGE_ACCOUNT`.
+Este repo solo asume que la plataforma entrega al pipeline los paths y parametros necesarios para ejecutar los componentes funcionales. El Storage MLOps funcional y el Storage runtime interno de Azure ML siguen siendo responsabilidades separadas de plataforma.
 
 ## Entrada
 
@@ -97,14 +79,11 @@ Layout Azure:
 
 Azure ML genera artifacts internos como snapshots de codigo, environments, logs y job artifacts runtime. Esos blobs no son outputs funcionales del modelo y viven en el Storage runtime administrado por plataforma para el workspace activo.
 
-La construccion de metadata, manifest y publicacion esta documentada en
-`docs/artifact-publishing-contract.md`. La logica ML produce un `RunResult`
-neutral; los destinos como Azure Blob, Azure ML y SQL se resuelven mediante
-sinks de infraestructura.
+La construccion de metadata, manifest y publicacion final pertenece a plataforma. La logica funcional de este repo produce artefactos locales y manifest neutral; los destinos como Azure Blob, Azure ML y SQL se resuelven fuera de este package.
 
 ## Seguridad
 
 - No account keys ni connection strings.
 - No Owner/Contributor de subscription para este repo.
-- No sandbox personal en GitHub Actions.
-- Function key es control temporal; siguiente iteracion: Entra ID/Easy Auth o API Management.
+- No sandbox personal en pipelines operativos.
+- La autenticacion de endpoints operativos pertenece a plataforma.

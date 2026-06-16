@@ -50,7 +50,7 @@ No hay API de compatibilidad bajo `pricing_mlops.monitoring` para reglas, config
 
 El flujo automatico lo dispara plataforma con Event Grid sobre `raw-masked/incoming/*.csv`. Este repo no contiene Event Grid, Function App ni IaC.
 
-GitHub Actions no es requerido para operar el flujo. Solo se usa para CI y pruebas controladas.
+GitHub Actions en este repo solo se usa para CI funcional. La operacion Azure del flujo vive en `pricing-mlops-platform`.
 
 ## Instalacion
 
@@ -78,63 +78,18 @@ Los componentes de monitoreo escriben estado intermedio y artefactos finales baj
 
 `runs/` esta ignorado por Git.
 
-## Operacion Sin GitHub Actions
+## Operacion Azure
 
-```bash
-az login
-az account set --subscription "<azure-subscription-name>"
-
-cd ../pricing-mlops-platform
-
-MODEL_REPO_PATH=../pricing-mlops \
-mlops/scripts/publish_orchestrator_function.sh staging
-
-AZURE_FUNCTION_APP=func-pricing-mlops-staging-<suffix> \
-AZURE_RESOURCE_GROUP=rg-pricing-mlops-staging \
-AZURE_ML_WORKSPACE=mlw-pricing-mlops-stg-v2-<suffix> \
-mlops/scripts/run_model_flow_function.sh staging team46 samples/sample_pricing_v1.csv
-```
-
-El script:
-
-- obtiene la Function key sin imprimirla;
-- llama `POST /api/model-flow` usando header `x-functions-key`;
-- espera el job Azure ML con ARM/REST, sin `az ml`;
-- verifica metadata de los seis outputs en Storage;
-- falla si existe `raw-unmasked` en `staging`.
+La operacion remota se dispara desde `pricing-mlops-platform`. Este repo no publica Function Apps, no ejecuta jobs Azure ML directamente y no mantiene variables de ambiente de plataforma.
 
 ## GitHub Actions
 
-`.github/workflows/model-flow.yml` hace:
+`.github/workflows/ci.yml` hace:
 
-| Trigger | Accion | Azure login |
-|---|---|---|
-| `pull_request` | Compile, tests, validacion sample y flow local. | No |
-| `workflow_dispatch`, `run_azure_flow=false` | Misma validacion local. | No |
-| `workflow_dispatch`, `run_azure_flow=true` | Hace checkout de `pricing-mlops-platform` y llama `pricing-mlops-platform/mlops/scripts/run_model_flow_function.sh`. | Si |
-
-Ambientes permitidos: `staging`, `validation`. No se aceptan sandboxes ni prod.
-
-## Variables Azure Esperadas
-
-Configurar en GitHub environment o exportar localmente:
-
-```text
-AZURE_CLIENT_ID
-AZURE_TENANT_ID
-AZURE_SUBSCRIPTION_ID
-AZURE_STORAGE_ACCOUNT
-AZURE_RESOURCE_GROUP
-AZURE_ML_WORKSPACE
-AZURE_FUNCTION_APP
-MLOPS_CONTAINER_RAW_MASKED=raw-masked
-MLOPS_CONTAINER_CURATED=curated
-MLOPS_CONTAINER_RUNS=runs
-MLOPS_CONTAINER_SNAPSHOTS=snapshots
-MLOPS_CONTAINER_DRIFT_LOGS=drift-logs
-MLOPS_CONTAINER_REPORTS=reports
-MLOPS_CONTAINER_ARTIFACTS=artifacts
-```
+| Trigger | Accion |
+|---|---|
+| `pull_request` | Compile, tests y validacion sample local. |
+| `workflow_dispatch` | Misma validacion local ejecutada manualmente. |
 
 ## Outputs
 
@@ -153,7 +108,7 @@ Artefactos:
 | `artifacts` | `curated_pricing.csv` |
 | `curated` | `curated_pricing.csv` |
 
-Estos outputs funcionales se escriben solo en el Storage MLOps publicado por plataforma (`AZURE_STORAGE_ACCOUNT`, hoy `<mlops-storage-account>` en `staging`). Azure ML crea snapshots de codigo, logs, environments y artifacts runtime en el Storage runtime del workspace activo; este repo no los interpreta como outputs del modelo.
+Estos outputs funcionales se escriben solo en el Storage MLOps publicado por plataforma. Azure ML crea snapshots de codigo, logs, environments y artifacts runtime en el Storage runtime del workspace activo; este repo no los interpreta como outputs del modelo.
 
 ## Metadata Audit
 

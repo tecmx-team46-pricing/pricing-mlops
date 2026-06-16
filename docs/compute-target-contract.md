@@ -8,7 +8,7 @@ La ruta remota activa es:
 Azure Function -> Azure ML pipeline/job -> Storage MLOps outputs
 ```
 
-El pipeline activo se define en `pricing-mlops-platform/mlops/azureml/pricing-mlops-pipeline.yml`, con `pricing-mlops-job.yml` como fallback command job. La plataforma empaqueta un snapshot de este repo como `pricing-mlops-source/`.
+El pipeline activo se define y ejecuta desde `pricing-mlops-platform`. La plataforma empaqueta un snapshot de este repo como `pricing-mlops-source/`.
 
 El pipeline visible se compone de pasos funcionales de este repo y un paso de publicacion de plataforma:
 
@@ -90,4 +90,4 @@ Esos artifacts pertenecen al workspace/runtime de Azure ML, no al contrato funci
 - No usar account keys ni connection strings para datos MLOps.
 - No usar `raw-unmasked`.
 - No asumir que el Storage runtime de Azure ML y el Storage MLOps son la misma cuenta.
-- GitHub Actions no es requerido para operar el flujo.
+- GitHub Actions de este repo no opera el flujo remoto; solo valida el package funcional.

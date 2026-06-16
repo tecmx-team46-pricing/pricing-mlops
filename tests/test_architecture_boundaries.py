@@ -33,6 +33,15 @@ FORBIDDEN_LEGACY_MONITORING_IMPORTS = (
     ".".join(("pricing_mlops", "monitoring", "artifact_contract")),
 )
 
+FORBIDDEN_MODEL_REPO_WORKFLOW_TOKENS = (
+    "azure/login",
+    "run_azure_flow",
+    "run_model_flow_function.sh",
+    "AZURE_FUNCTION_APP",
+    "AZURE_ML_WORKSPACE",
+    "tecmx-team46-pricing/pricing-mlops-platform",
+)
+
 
 def test_domain_modules_do_not_import_infrastructure_sdks():
     repo_root = Path(__file__).resolve().parents[1]
@@ -124,3 +133,25 @@ def test_old_monitoring_imports_are_not_reintroduced():
     }
 
     assert violations == {}
+
+
+def test_model_repo_workflows_do_not_operate_azure_flow():
+    repo_root = Path(__file__).resolve().parents[1]
+    workflow_files = sorted((repo_root / ".github" / "workflows").glob("*.yml"))
+
+    violations = {
+        str(path.relative_to(repo_root)): token
+        for path in workflow_files
+        for token in FORBIDDEN_MODEL_REPO_WORKFLOW_TOKENS
+        if token in path.read_text(encoding="utf-8", errors="ignore")
+    }
+
+    assert violations == {}
+
+
+def test_platform_environment_examples_are_not_reintroduced():
+    repo_root = Path(__file__).resolve().parents[1]
+    environment_dir = repo_root / "configs" / "environments"
+    environment_examples = sorted(environment_dir.glob("*." + "example" + ".env"))
+
+    assert [path.as_posix() for path in environment_examples] == []
