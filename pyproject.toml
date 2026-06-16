@@ -1,0 +1,29 @@
+[build-system]
+requires = ["setuptools>=69"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "pricing-mlops"
+version = "0.1.0"
+description = "Functional Pricing MLOps AUTH monitoring flow."
+readme = "README.md"
+requires-python = ">=3.11"
+dependencies = [
+  "azure-ai-ml>=1.32.0",
+  "azure-identity>=1.17.0",
+  "azure-storage-blob>=12.20.0",
+]
+
+[project.optional-dependencies]
+dev = ["pytest>=8.0"]
+sql = ["pyodbc>=5.1.0"]
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.setuptools.package-data]
+"pricing.auth_monitoring" = ["*.json"]
+
+[tool.pytest.ini_options]
+pythonpath = ["src"]
+testpaths = ["tests"]

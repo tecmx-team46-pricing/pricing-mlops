@@ -1,0 +1,68 @@
+{
+  "columns": {
+    "baseline_history": [
+      "P20_PRICE",
+      "P50_PRICE",
+      "P85_PRICE",
+      "auth_band_width",
+      "auth_band_width_pct",
+      "n_transactions",
+      "revenue_sum"
+    ],
+    "global_bin": [
+      "bin_rslpriceusd",
+      "bin_costp5",
+      "bin_quantity"
+    ],
+    "key_columns": [
+      "kpn",
+      "vpareadescription",
+      "distysegment"
+    ],
+    "official_recommendation_preferred": [
+      "Selected_Optimal_Price",
+      "selected_recommended_price"
+    ],
+    "proxy_recommendation": [
+      "Balanced",
+      "More_Profit",
+      "Revenue_Aggressive"
+    ]
+  },
+  "project": {
+    "baseline_version": "baseline_mlops_pricing_v1",
+    "bin_catalog_scope": "AUTH_AND_NON_AUTH_GLOBAL",
+    "bin_catalog_version": "catalog_general_masked_v1",
+    "current_history_interpretation": "authorized_price_history",
+    "environment": "local_real_monitoring",
+    "monitoring_scope": "AUTH_ONLY",
+    "name": "pricing-mlops",
+    "runs_model": false,
+    "team": "Equipo46"
+  },
+  "schemas": {
+    "data_quality": "data_quality_log_v2",
+    "input_history_drift": "auth_history_drift_v1",
+    "recommendation_validity": "auth_recommendation_validity_v4_operational_decision"
+  },
+  "thresholds": {
+    "alert_profile": "balanced",
+    "current_history_coverage": {
+      "red": 0.7,
+      "yellow": 0.85
+    },
+    "ks": {
+      "red": 0.2,
+      "yellow": 0.1
+    },
+    "min_segment_support_for_dashboard": 30,
+    "new_combo_rate": {
+      "red": 0.15,
+      "yellow": 0.05
+    },
+    "psi": {
+      "red": 0.25,
+      "yellow": 0.1
+    }
+  }
+}

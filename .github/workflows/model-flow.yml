@@ -1,0 +1,115 @@
+name: Model Flow
+
+on:
+  pull_request:
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: "Azure environment"
+        type: choice
+        options:
+          - staging
+          - validation
+        default: staging
+      run_owner:
+        description: "Logical owner partition for uploaded outputs"
+        type: string
+        required: false
+        default: team46
+      run_azure_flow:
+        description: "Call Azure Function and wait for Azure ML outputs"
+        type: boolean
+        default: false
+      input_blob_path:
+        description: "Blob path under raw-masked"
+        type: string
+        required: false
+        default: "samples/sample_pricing_v1.csv"
+
+jobs:
+  model-ci:
+    name: Model CI
+    runs-on: ubuntu-latest
+    if: github.event_name == 'pull_request' || !inputs.run_azure_flow
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install dependencies
+        run: python -m pip install -e ".[dev]"
+
+      - name: Compile Python files
+        run: python -m compileall src scripts tests
+
+      - name: Run tests
+        run: python -m pytest
+
+      - name: Validate masked sample
+        run: python scripts/validate_inputs.py --input data/samples/masked/sample_pricing.csv
+
+  azure-model-flow:
+    name: Azure Model Flow
+    runs-on: ubuntu-latest
+    if: github.event_name == 'workflow_dispatch' && inputs.run_azure_flow
+    environment: ${{ inputs.environment }}
+    permissions:
+      contents: read
+      id-token: write
+    env:
+      AZURE_FUNCTION_APP: ${{ vars.AZURE_FUNCTION_APP }}
+      AZURE_RESOURCE_GROUP: ${{ vars.AZURE_RESOURCE_GROUP }}
+      AZURE_ML_WORKSPACE: ${{ vars.AZURE_ML_WORKSPACE }}
+      AZURE_STORAGE_ACCOUNT: ${{ vars.AZURE_STORAGE_ACCOUNT }}
+      MLOPS_CONTAINER_RAW_MASKED: ${{ vars.MLOPS_CONTAINER_RAW_MASKED }}
+      MLOPS_CONTAINER_CURATED: ${{ vars.MLOPS_CONTAINER_CURATED }}
+      MLOPS_CONTAINER_RUNS: ${{ vars.MLOPS_CONTAINER_RUNS }}
+      MLOPS_CONTAINER_SNAPSHOTS: ${{ vars.MLOPS_CONTAINER_SNAPSHOTS }}
+      MLOPS_CONTAINER_DRIFT_LOGS: ${{ vars.MLOPS_CONTAINER_DRIFT_LOGS }}
+      MLOPS_CONTAINER_REPORTS: ${{ vars.MLOPS_CONTAINER_REPORTS }}
+      MLOPS_CONTAINER_ARTIFACTS: ${{ vars.MLOPS_CONTAINER_ARTIFACTS }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/checkout@v4
+        with:
+          repository: tecmx-team46-pricing/pricing-mlops-platform
+          path: pricing-mlops-platform
+
+      - uses: azure/login@v2
+        with:
+          client-id: ${{ vars.AZURE_CLIENT_ID }}
+          tenant-id: ${{ vars.AZURE_TENANT_ID }}
+          subscription-id: ${{ vars.AZURE_SUBSCRIPTION_ID }}
+
+      - name: Validate Azure variables
+        shell: bash
+        run: |
+          set -euo pipefail
+          required=(
+            AZURE_FUNCTION_APP
+            AZURE_RESOURCE_GROUP
+            AZURE_ML_WORKSPACE
+            AZURE_STORAGE_ACCOUNT
+            MLOPS_CONTAINER_RAW_MASKED
+            MLOPS_CONTAINER_CURATED
+            MLOPS_CONTAINER_RUNS
+            MLOPS_CONTAINER_SNAPSHOTS
+            MLOPS_CONTAINER_DRIFT_LOGS
+            MLOPS_CONTAINER_REPORTS
+            MLOPS_CONTAINER_ARTIFACTS
+          )
+          for name in "${required[@]}"; do
+            if [[ -z "${!name:-}" ]]; then
+              echo "Missing required GitHub environment variable: ${name}" >&2
+              exit 1
+            fi
+          done
+
+      - name: Call Azure Function orchestrator
+        shell: bash
+        env:
+          PRICING_MLOPS_REPO: ${{ github.workspace }}
+        run: pricing-mlops-platform/mlops/scripts/run_model_flow_function.sh "${{ inputs.environment }}" "${{ inputs.run_owner }}" "${{ inputs.input_blob_path }}"

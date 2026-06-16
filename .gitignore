@@ -1,0 +1,46 @@
+# Python
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.venv/
+venv/
+build/
+dist/
+*.egg-info/
+
+# Local configuration and secrets
+.env
+.env.*
+!.env.example
+configs/environments/*.env
+!configs/environments/*.example.env
+
+# Local run outputs
+runs/
+outputs/
+artifacts/
+reports/generated/
+reports/**/*.html
+reports/**/*.pdf
+reports/**/*.docx
+
+# Real or large data files
+data/samples/unmasked/**
+!data/samples/unmasked/.gitignore
+data/**/*.parquet
+data/**/*.pqt
+data/**/*.feather
+data/**/*.avro
+data/**/*.orc
+data/**/*.sqlite
+data/**/*.db
+
+# Notebook checkpoints
+.ipynb_checkpoints/
+
+# OS/editor
+.DS_Store
+.idea/
+.vscode/
