@@ -45,6 +45,26 @@ EXPECTED_COMPONENTS = {
         "entrypoint": "scripts/components/calculate_operational_decision.py",
         "inputs": {"storage_account", "run_id", "job_identity_client_id", "previous_step_token"},
     },
+    "publish_outputs": {
+        "name": "pricing_mlops_publish_outputs",
+        "entrypoint": "scripts/components/publish_outputs.py",
+        "inputs": {
+            "storage_account",
+            "run_id",
+            "environment",
+            "run_owner",
+            "input_blob_path",
+            "trigger_type",
+            "model_repo",
+            "model_ref",
+            "model_commit_sha",
+            "monitoring_config_version",
+            "monitoring_config_path",
+            "job_identity_client_id",
+            "previous_step_token",
+        },
+        "outputs": set(),
+    },
 }
 
 
@@ -58,7 +78,10 @@ def test_azureml_component_specs_are_registered_units():
         assert component["code"] == "../.."
         assert component["environment"] == RUNTIME_ENVIRONMENT
         assert set(component["inputs"]) == expected["inputs"]
-        assert "flow_token" in component["outputs"]
+        if expected.get("outputs", {"flow_token"}):
+            assert "flow_token" in component["outputs"]
+        else:
+            assert "outputs" not in component or component["outputs"] in ({}, None)
         assert "MLOPS_USE_MANAGED_IDENTITY_CREDENTIAL=true" in component["command"]
         assert "AZURE_ML_JOB_IDENTITY_CLIENT_ID=${{inputs.job_identity_client_id}}" in component["command"]
         assert expected["entrypoint"] in component["command"]
@@ -116,7 +139,10 @@ def test_model_repo_registers_components_from_github_actions():
 
     assert push["branches"] == ["main"]
     assert "azureml/components/**" in push["paths"]
+    assert "azureml/endpoints/**" in push["paths"]
     assert "scripts/register_azureml_components.sh" in push["paths"]
+    assert "scripts/deploy_auth_monitoring_batch_endpoint.sh" in push["paths"]
+    assert "scripts/invoke_auth_monitoring_batch_endpoint.sh" in push["paths"]
     assert workflow["permissions"] == {"contents": "read", "id-token": "write"}
     assert workflow["jobs"]["register-components"]["environment"] == "staging"
     assert "azure/login@v2" in step_text

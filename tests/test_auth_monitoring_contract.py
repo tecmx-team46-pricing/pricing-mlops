@@ -52,7 +52,7 @@ def test_auth_monitoring_config_rejects_unknown_overrides():
         raise AssertionError("Unknown threshold override should fail fast")
 
 
-def test_auth_monitoring_artifact_contract_is_local_and_platform_publishable():
+def test_auth_monitoring_artifact_contract_is_local_and_publishable():
     artifacts = expected_auth_monitoring_artifacts()
 
     assert artifacts["operational_decision_summary"].relative_path == Path(

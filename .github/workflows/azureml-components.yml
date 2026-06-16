@@ -6,11 +6,14 @@ on:
       - main
     paths:
       - "azureml/components/**"
+      - "azureml/endpoints/**"
       - "azureml/pipelines/**"
       - "azureml/manifests/**"
       - "azureml/environment.yml"
       - "azureml/conda.yml"
       - "scripts/components/**"
+      - "scripts/deploy_auth_monitoring_batch_endpoint.sh"
+      - "scripts/invoke_auth_monitoring_batch_endpoint.sh"
       - "scripts/register_azureml_components.sh"
       - ".github/workflows/azureml-components.yml"
   workflow_dispatch:

@@ -10,9 +10,9 @@ RELEASE_MANIFEST = ROOT / "azureml" / "manifests" / "auth-monitoring-release.jso
 REGISTER_SCRIPT = ROOT / "scripts" / "register_azureml_components.sh"
 WORKFLOW_FILE = ROOT / ".github" / "workflows" / "azureml-components.yml"
 
-PIPELINE_VERSION = "0.1.2"
+PIPELINE_VERSION = "0.1.3"
 FUNCTIONAL_COMPONENT_VERSION = "0.1.2"
-PLATFORM_PUBLISH_COMPONENT = "azureml:pricing_mlops_platform_publish_outputs:0.1.1"
+PUBLISH_COMPONENT = "azureml:pricing_mlops_publish_outputs:0.1.2"
 
 EXPECTED_FUNCTIONAL_COMPONENTS = {
     "validate_prepare": "pricing_mlops_validate_prepare",
@@ -40,7 +40,7 @@ def test_auth_monitoring_pipeline_component_composes_registered_components():
         assert job["identity"] == {"type": "user_identity"}
 
     publish_job = pipeline["jobs"]["publish_outputs"]
-    assert publish_job["component"] == PLATFORM_PUBLISH_COMPONENT
+    assert publish_job["component"] == PUBLISH_COMPONENT
     assert publish_job["identity"] == {"type": "user_identity"}
     assert (
         publish_job["inputs"]["previous_step_token"]["path"]
@@ -56,11 +56,11 @@ def test_auth_monitoring_release_manifest_matches_pipeline_component():
     assert manifest["pipeline_component"] == (
         f"azureml:{pipeline['name']}:{pipeline['version']}"
     )
-    assert manifest["platform_publish_component"] == PLATFORM_PUBLISH_COMPONENT
     for job_name, component_name in EXPECTED_FUNCTIONAL_COMPONENTS.items():
         assert manifest["components"][job_name] == (
             f"azureml:{component_name}:{FUNCTIONAL_COMPONENT_VERSION}"
         )
+    assert manifest["components"]["publish_outputs"] == PUBLISH_COMPONENT
 
 
 def test_register_script_and_workflow_publish_pipeline_component():

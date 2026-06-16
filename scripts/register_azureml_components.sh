@@ -84,6 +84,7 @@ component_files=(
   "azureml/components/calculate_recommendation_validity.yml"
   "azureml/components/calculate_auth_history_drift.yml"
   "azureml/components/calculate_operational_decision.yml"
+  "azureml/components/publish_outputs.yml"
 )
 
 pipeline_component_files=(
