@@ -21,7 +21,7 @@ pricing-auth-monitoring/blue
 -> Storage MLOps outputs
 ```
 
-El pipeline component completo vive en `azureml/pipelines/auth_monitoring_pipeline.yml`. El endpoint/deployment vive en `azureml/endpoints/`. El manifest de release vive en `azureml/manifests/auth-monitoring-release.json`.
+El pipeline component completo vive en `azureml/pipelines/auth_monitoring_pipeline.yml`. El endpoint/deployment vive en `azureml/endpoints/`. El manifest de release vive en `azureml/manifests/auth-monitoring-release.json`. La lista operativa de assets vive en `configs/azureml_auth_monitoring.yml` y se registra/despliega con scripts Python basados en `azure-ai-ml`.
 
 ## Inputs De Plataforma
 

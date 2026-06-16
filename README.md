@@ -8,7 +8,7 @@ Repositorio funcional y operacional del flujo Pricing MLOps AUTH monitoring. Est
 
 ```text
 Azure ML batch endpoint pricing-auth-monitoring/blue
--> pricing_mlops_auth_monitoring_pipeline:0.1.4
+-> pricing_mlops_auth_monitoring_pipeline:0.1.8
 -> validate_prepare
 -> build_monitoring_inputs
 -> calculate_recommendation_validity
@@ -57,16 +57,19 @@ Registrar ambiente, componentes y pipeline component:
 AZURE_SUBSCRIPTION_ID=<subscription-id> \
 AZURE_RESOURCE_GROUP=<resource-group> \
 AZURE_ML_WORKSPACE=<workspace> \
-scripts/register_azureml_components.sh
+python scripts/azureml/register_assets.py --config configs/azureml_auth_monitoring.yml
 ```
 
 Crear o actualizar el batch endpoint:
 
 ```bash
+AZURE_SUBSCRIPTION_ID=<subscription-id> \
 AZURE_RESOURCE_GROUP=<resource-group> \
 AZURE_ML_WORKSPACE=<workspace> \
-scripts/deploy_auth_monitoring_batch_endpoint.sh
+python scripts/azureml/deploy_endpoint.py --config configs/azureml_auth_monitoring.yml
 ```
+
+Los wrappers `scripts/register_azureml_components.sh` y `scripts/deploy_auth_monitoring_batch_endpoint.sh` quedan como compatibilidad local; ambos delegan a los scripts Python.
 
 Invocar smoke test:
 

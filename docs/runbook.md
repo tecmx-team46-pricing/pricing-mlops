@@ -14,20 +14,21 @@ python scripts/validate_inputs.py --input data/samples/masked/sample_pricing.csv
 AZURE_SUBSCRIPTION_ID=<subscription-id> \
 AZURE_RESOURCE_GROUP=<resource-group> \
 AZURE_ML_WORKSPACE=<workspace> \
-scripts/register_azureml_components.sh
+python scripts/azureml/register_assets.py --config configs/azureml_auth_monitoring.yml
 ```
 
-El script registra el environment, command components y `pricing_mlops_auth_monitoring_pipeline`.
+El script Python registra el environment, command components y `pricing_mlops_auth_monitoring_pipeline` usando `azure-ai-ml`. El wrapper `scripts/register_azureml_components.sh` queda como compatibilidad local y delega al script Python.
 
 ## Desplegar Endpoint
 
 ```bash
+AZURE_SUBSCRIPTION_ID=<subscription-id> \
 AZURE_RESOURCE_GROUP=<resource-group> \
 AZURE_ML_WORKSPACE=<workspace> \
-scripts/deploy_auth_monitoring_batch_endpoint.sh
+python scripts/azureml/deploy_endpoint.py --config configs/azureml_auth_monitoring.yml
 ```
 
-El script valida que el pipeline component del manifest exista y crea/actualiza `pricing-auth-monitoring/blue`.
+El script Python lee `configs/azureml_auth_monitoring.yml`, usa el manifest para seleccionar el pipeline component y crea/actualiza `pricing-auth-monitoring/blue`. El wrapper `scripts/deploy_auth_monitoring_batch_endpoint.sh` queda como compatibilidad local y delega al script Python.
 
 ## Invocar Smoke Test
 
@@ -40,7 +41,7 @@ AZURE_ML_WAIT_FOR_COMPLETION=true \
 scripts/invoke_auth_monitoring_batch_endpoint.sh
 ```
 
-Este paso no corre en GitHub Actions por defecto. GitHub publica el pipeline/endpoint; el smoke se ejecuta localmente cuando se necesita validar el runtime completo de Azure ML.
+Este paso no corre en GitHub Actions. GitHub publica el pipeline/endpoint con scripts Python; el smoke se ejecuta localmente cuando se necesita validar el runtime completo de Azure ML.
 
 El resultado imprime:
 
