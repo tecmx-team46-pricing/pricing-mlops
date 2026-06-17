@@ -1,0 +1,44 @@
+$schema: https://azuremlschemas.azureedge.net/latest/commandComponent.schema.json
+type: command
+name: pricing_mlops_prepare_current_auth_history
+version: 0.1.0
+display_name: prepare_current_auth_history
+description: Build current AUTH history snapshot from masked or curated AUTH input.
+code: ../..
+environment: azureml:pricing-mlops-runtime:0.1.0
+inputs:
+  storage_account:
+    type: string
+  input_container:
+    type: string
+    default: raw-masked
+  input_blob_path:
+    type: string
+  run_id:
+    type: string
+  current_history_container:
+    type: string
+    default: artifacts
+  current_history_prefix:
+    type: string
+  job_identity_client_id:
+    type: string
+  previous_step_token:
+    type: uri_folder
+outputs:
+  flow_token:
+    type: uri_folder
+command: >-
+  test -f ${{inputs.previous_step_token}}/done.txt &&
+  MLOPS_USE_MANAGED_IDENTITY_CREDENTIAL=true
+  AZURE_ML_JOB_IDENTITY_CLIENT_ID=${{inputs.job_identity_client_id}}
+  python scripts/components/prepare_current_auth_history.py
+  --storage-account ${{inputs.storage_account}}
+  --input-container ${{inputs.input_container}}
+  --input-blob-path ${{inputs.input_blob_path}}
+  --output-dir outputs/current_auth_history
+  --run-id ${{inputs.run_id}}
+  --current-history-container ${{inputs.current_history_container}}
+  --current-history-prefix ${{inputs.current_history_prefix}} &&
+  mkdir -p ${{outputs.flow_token}} &&
+  echo prepare_current_auth_history > ${{outputs.flow_token}}/done.txt

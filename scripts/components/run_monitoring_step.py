@@ -63,6 +63,8 @@ def _parser() -> argparse.ArgumentParser:
     parser.add_argument("--drift-prefix", default="")
     parser.add_argument("--decision-container", default="")
     parser.add_argument("--decision-prefix", default="")
+    parser.add_argument("--handoff-container", default="")
+    parser.add_argument("--handoff-prefix", default="")
     return parser
 
 

@@ -1,6 +1,6 @@
 import pytest
 
-from pricing_mlops.preparation.validation import validate_pricing_input
+from pricing.preparation.validation import validate_pricing_input
 
 
 def test_validates_required_columns_and_non_empty_dataset():

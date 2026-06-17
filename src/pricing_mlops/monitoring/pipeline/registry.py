@@ -9,6 +9,9 @@ from pricing_mlops.monitoring.pipeline.steps.auth_history_drift_step import run_
 from pricing_mlops.monitoring.pipeline.steps.build_monitoring_inputs import build_monitoring_inputs
 from pricing_mlops.monitoring.pipeline.steps.operational_decision_step import run_operational_decision_step
 from pricing_mlops.monitoring.pipeline.steps.recommendation_validity_step import run_recommendation_validity_step
+from pricing_mlops.monitoring.pipeline.steps.simulate_operational_handoff_step import (
+    run_simulate_operational_handoff_step,
+)
 
 
 StepRunner = Callable[..., Any]
@@ -98,6 +101,23 @@ MONITORING_STEPS: tuple[MonitoringStepDefinition, ...] = (
         state_prefix_arg="validity_prefix",
         publish_container_arg="decision_container",
         publish_prefix_arg="decision_prefix",
+        requires_run_id=True,
+    ),
+    MonitoringStepDefinition(
+        slug="simulate_operational_handoff",
+        component_name="pricing_mlops_simulate_operational_handoff",
+        runner=run_simulate_operational_handoff_step,
+        summary=lambda result: {
+            "run_readiness_status": result["run_readiness_status"],
+            "simulated_decision": result["simulated_decision"],
+            "simulated_notification": result["simulated_notification"],
+        },
+        input_dir="outputs/operational_decision",
+        output_dir="outputs/simulate_operational_handoff",
+        state_container_arg="decision_container",
+        state_prefix_arg="decision_prefix",
+        publish_container_arg="handoff_container",
+        publish_prefix_arg="handoff_prefix",
         requires_run_id=True,
     ),
 )

@@ -18,8 +18,11 @@ REQUIRED_AUTH_MONITORING_ARTIFACTS = (
     "logs/auth_recommendation_validity_log.csv",
     "logs/auth_history_drift_log.csv",
     "summaries/operational_decision_summary.csv",
+    "summaries/notification_payload.json",
+    "summaries/simulated_operational_handoff.json",
     "summaries/run_readiness_summary.csv",
     "reports/auth_recommendation_validity_report.md",
+    "reports/simulated_operational_handoff.md",
     "manifest/artifact_manifest.json",
 )
 

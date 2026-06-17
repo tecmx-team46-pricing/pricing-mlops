@@ -58,18 +58,28 @@ Pasos esperados en Azure ML:
 
 ```text
 validate_prepare
+feature_engineering
+prepare_current_auth_history
 build_monitoring_inputs
 calculate_recommendation_validity
 calculate_auth_history_drift
 calculate_operational_decision
+simulate_operational_handoff
 publish_outputs
+notify_operational_decision
 ```
 
 Inputs obligatorios para una corrida real:
 
 ```text
 baseline recommendation snapshot path
-current AUTH history snapshot path
+current masked AUTH source path
 ```
 
-La publicacion final a Storage ocurre en `pricing_mlops_publish_outputs`, dentro de este repo.
+`feature_engineering` genera `curated/current_auth_features.csv` desde el CSV masked/current. `prepare_current_auth_history` consume esas features y publica `current_auth_history_snapshot_real.csv` en `artifacts/component-state/<run_id>/current_auth_history/`.
+
+`pricing_mlops_build_baseline_snapshot` se ejecuta solo como operacion opt-in para refrescar baseline desde una feature table aprobada. El pipeline default sigue usando `baseline_snapshot_container` y `baseline_snapshot_blob_path`.
+
+`simulate_operational_handoff` solo genera evidencia placeholder del siguiente paso operativo segun el semaforo; no envia mensajes externos ni bloquea sistemas downstream.
+
+La publicacion final a Storage ocurre en `pricing_mlops_publish_outputs`, dentro de este repo. `notify_operational_decision` corre despues para validar y exponer el payload publicado de notificacion.

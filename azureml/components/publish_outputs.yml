@@ -1,7 +1,7 @@
 $schema: https://azuremlschemas.azureedge.net/latest/commandComponent.schema.json
 type: command
 name: pricing_mlops_publish_outputs
-version: 0.1.2
+version: 0.1.6
 display_name: publish_outputs
 description: Publish AUTH monitoring artifacts to the operational storage layout.
 code: ../..
@@ -33,6 +33,9 @@ inputs:
     type: string
   previous_step_token:
     type: uri_folder
+outputs:
+  flow_token:
+    type: uri_folder
 command: >-
   test -f ${{inputs.previous_step_token}}/done.txt &&
   MLOPS_USE_MANAGED_IDENTITY_CREDENTIAL=true
@@ -40,7 +43,7 @@ command: >-
   python scripts/components/publish_outputs.py
   --storage-account ${{inputs.storage_account}}
   --run-artifacts-container artifacts
-  --run-artifacts-prefix component-state/${{inputs.run_id}}/operational_decision
+  --run-artifacts-prefix component-state/${{inputs.run_id}}/simulate_operational_handoff
   --environment ${{inputs.environment}}
   --run-owner ${{inputs.run_owner}}
   --run-id ${{inputs.run_id}}
@@ -52,4 +55,6 @@ command: >-
   --model-ref ${{inputs.model_ref}}
   --model-commit-sha ${{inputs.model_commit_sha}}
   --monitoring-config-version ${{inputs.monitoring_config_version}}
-  --monitoring-config-path ${{inputs.monitoring_config_path}}
+  --monitoring-config-path ${{inputs.monitoring_config_path}} &&
+  mkdir -p ${{outputs.flow_token}} &&
+  echo publish_outputs > ${{outputs.flow_token}}/done.txt

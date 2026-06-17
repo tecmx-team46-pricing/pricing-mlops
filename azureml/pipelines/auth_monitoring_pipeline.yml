@@ -1,7 +1,7 @@
 $schema: https://azuremlschemas.azureedge.net/latest/pipelineComponent.schema.json
 type: pipeline
 name: pricing_mlops_auth_monitoring_pipeline
-version: 0.1.8
+version: 0.1.17
 display_name: Pricing MLOps AUTH monitoring pipeline component
 description: AUTH monitoring pipeline assembled and published from pricing-mlops components.
 inputs:
@@ -68,6 +68,46 @@ jobs:
         type: uri_folder
     identity:
       type: managed_identity
+  feature_engineering:
+    type: command
+    compute: azureml:cpu-cluster
+    component: azureml:pricing_mlops_feature_engineering:0.1.0
+    inputs:
+      storage_account: ${{parent.inputs.storage_account}}
+      input_container: ${{parent.inputs.current_history_container}}
+      input_blob_path: ${{parent.inputs.current_history_blob_path}}
+      run_id: ${{parent.inputs.run_id}}
+      feature_container: artifacts
+      feature_prefix: component-state/${{parent.inputs.run_id}}/feature_engineering
+      job_identity_client_id: ${{parent.inputs.job_identity_client_id}}
+      previous_step_token:
+        type: uri_folder
+        path: ${{parent.jobs.validate_prepare.outputs.flow_token}}
+    outputs:
+      flow_token:
+        type: uri_folder
+    identity:
+      type: managed_identity
+  prepare_current_auth_history:
+    type: command
+    compute: azureml:cpu-cluster
+    component: azureml:pricing_mlops_prepare_current_auth_history:0.1.0
+    inputs:
+      storage_account: ${{parent.inputs.storage_account}}
+      input_container: artifacts
+      input_blob_path: component-state/${{parent.inputs.run_id}}/feature_engineering/curated/current_auth_features.csv
+      run_id: ${{parent.inputs.run_id}}
+      current_history_container: artifacts
+      current_history_prefix: component-state/${{parent.inputs.run_id}}/current_auth_history
+      job_identity_client_id: ${{parent.inputs.job_identity_client_id}}
+      previous_step_token:
+        type: uri_folder
+        path: ${{parent.jobs.feature_engineering.outputs.flow_token}}
+    outputs:
+      flow_token:
+        type: uri_folder
+    identity:
+      type: managed_identity
   build_monitoring_inputs:
     type: command
     compute: azureml:cpu-cluster
@@ -77,12 +117,12 @@ jobs:
       run_id: ${{parent.inputs.run_id}}
       baseline_snapshot_container: ${{parent.inputs.baseline_snapshot_container}}
       baseline_snapshot_blob_path: ${{parent.inputs.baseline_snapshot_blob_path}}
-      current_history_container: ${{parent.inputs.current_history_container}}
-      current_history_blob_path: ${{parent.inputs.current_history_blob_path}}
+      current_history_container: artifacts
+      current_history_blob_path: component-state/${{parent.inputs.run_id}}/current_auth_history/snapshots/current_auth_history_snapshot_real.csv
       job_identity_client_id: ${{parent.inputs.job_identity_client_id}}
       previous_step_token:
         type: uri_folder
-        path: ${{parent.jobs.validate_prepare.outputs.flow_token}}
+        path: ${{parent.jobs.prepare_current_auth_history.outputs.flow_token}}
     outputs:
       flow_token:
         type: uri_folder
@@ -123,7 +163,7 @@ jobs:
   calculate_operational_decision:
     type: command
     compute: azureml:cpu-cluster
-    component: azureml:pricing_mlops_calculate_operational_decision:0.1.3
+    component: azureml:pricing_mlops_calculate_operational_decision:0.1.6
     inputs:
       storage_account: ${{parent.inputs.storage_account}}
       run_id: ${{parent.inputs.run_id}}
@@ -136,10 +176,26 @@ jobs:
         type: uri_folder
     identity:
       type: managed_identity
+  simulate_operational_handoff:
+    type: command
+    compute: azureml:cpu-cluster
+    component: azureml:pricing_mlops_simulate_operational_handoff:0.1.3
+    inputs:
+      storage_account: ${{parent.inputs.storage_account}}
+      run_id: ${{parent.inputs.run_id}}
+      job_identity_client_id: ${{parent.inputs.job_identity_client_id}}
+      previous_step_token:
+        type: uri_folder
+        path: ${{parent.jobs.calculate_operational_decision.outputs.flow_token}}
+    outputs:
+      flow_token:
+        type: uri_folder
+    identity:
+      type: managed_identity
   publish_outputs:
     type: command
     compute: azureml:cpu-cluster
-    component: azureml:pricing_mlops_publish_outputs:0.1.2
+    component: azureml:pricing_mlops_publish_outputs:0.1.6
     inputs:
       storage_account: ${{parent.inputs.storage_account}}
       run_id: ${{parent.inputs.run_id}}
@@ -155,6 +211,28 @@ jobs:
       job_identity_client_id: ${{parent.inputs.job_identity_client_id}}
       previous_step_token:
         type: uri_folder
-        path: ${{parent.jobs.calculate_operational_decision.outputs.flow_token}}
+        path: ${{parent.jobs.simulate_operational_handoff.outputs.flow_token}}
+    outputs:
+      flow_token:
+        type: uri_folder
+    identity:
+      type: managed_identity
+  notify_operational_decision:
+    type: command
+    compute: azureml:cpu-cluster
+    component: azureml:pricing_mlops_notify_operational_decision:0.1.0
+    inputs:
+      storage_account: ${{parent.inputs.storage_account}}
+      run_id: ${{parent.inputs.run_id}}
+      environment: ${{parent.inputs.environment}}
+      run_owner: ${{parent.inputs.run_owner}}
+      trigger_type: ${{parent.inputs.trigger_type}}
+      job_identity_client_id: ${{parent.inputs.job_identity_client_id}}
+      previous_step_token:
+        type: uri_folder
+        path: ${{parent.jobs.publish_outputs.outputs.flow_token}}
+    outputs:
+      flow_token:
+        type: uri_folder
     identity:
       type: managed_identity

@@ -58,6 +58,16 @@ def test_auth_monitoring_artifact_contract_is_local_and_publishable():
     assert artifacts["operational_decision_summary"].relative_path == Path(
         "summaries/operational_decision_summary.csv"
     )
+    assert artifacts["notification_payload"].relative_path == Path("summaries/notification_payload.json")
+    assert artifacts["notification_payload"].platform_container_key == "runs"
+    assert artifacts["simulated_operational_handoff"].relative_path == Path(
+        "summaries/simulated_operational_handoff.json"
+    )
+    assert artifacts["simulated_operational_handoff"].platform_container_key == "runs"
+    assert artifacts["simulated_operational_handoff_report"].relative_path == Path(
+        "reports/simulated_operational_handoff.md"
+    )
+    assert artifacts["simulated_operational_handoff_report"].platform_container_key == "reports"
     assert artifacts["auth_history_drift_log"].relative_path == Path("logs/auth_history_drift_log.csv")
     assert artifacts["artifact_manifest"].relative_path == Path("manifest/artifact_manifest.json")
     assert all(not artifact.relative_path.is_absolute() for artifact in artifacts.values())

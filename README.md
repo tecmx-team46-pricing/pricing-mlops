@@ -8,13 +8,17 @@ Repositorio funcional y operacional del flujo Pricing MLOps AUTH monitoring. Est
 
 ```text
 Azure ML batch endpoint pricing-auth-monitoring/blue
--> pricing_mlops_auth_monitoring_pipeline:0.1.8
+-> pricing_mlops_auth_monitoring_pipeline:0.1.17
 -> validate_prepare
+-> feature_engineering
+-> prepare_current_auth_history
 -> build_monitoring_inputs
 -> calculate_recommendation_validity
 -> calculate_auth_history_drift
 -> calculate_operational_decision
--> pricing_mlops_publish_outputs:0.1.2
+-> simulate_operational_handoff
+-> pricing_mlops_publish_outputs:0.1.6
+-> notify_operational_decision
 -> Storage MLOps outputs versionados
 ```
 
@@ -23,15 +27,39 @@ Componentes Azure ML versionados:
 | Componente | Entrypoint | Responsabilidad |
 |---|---|---|
 | `pricing_mlops_validate_prepare` | `scripts/components/validate_prepare.py` | Descarga el CSV masked, valida y genera curated intermedio. |
+| `pricing_mlops_build_baseline_snapshot` | `scripts/components/build_baseline_snapshot.py` | Genera `model_output_snapshot.csv` desde una feature table aprobada. Componente opt-in; no forma parte del camino default. |
+| `pricing_mlops_feature_engineering` | `scripts/components/feature_engineering.py` | Genera `curated/current_auth_features.csv` y `curated/feature_table.csv` desde datos masked/current. |
+| `pricing_mlops_prepare_current_auth_history` | `scripts/components/prepare_current_auth_history.py` | Genera `current_auth_history_snapshot_real.csv` desde features current publicadas. |
 | `pricing_mlops_build_monitoring_inputs` | `scripts/components/run_monitoring_step.py --step build_monitoring_inputs` | Prepara snapshots de baseline y current history para monitoreo. |
 | `pricing_mlops_calculate_recommendation_validity` | `scripts/components/run_monitoring_step.py --step calculate_recommendation_validity` | Calcula validez de recomendaciones y summaries derivados del notebook. |
 | `pricing_mlops_calculate_auth_history_drift` | `scripts/components/run_monitoring_step.py --step calculate_auth_history_drift` | Calcula drift AUTH history contra baseline. |
 | `pricing_mlops_calculate_operational_decision` | `scripts/components/run_monitoring_step.py --step calculate_operational_decision` | Produce decision operacional, semaforo y manifest final. |
+| `pricing_mlops_simulate_operational_handoff` | `scripts/components/run_monitoring_step.py --step simulate_operational_handoff` | Simula el siguiente handoff operativo segun el semaforo, sin efectos externos. |
 | `pricing_mlops_publish_outputs` | `scripts/components/publish_outputs.py` | Publica artefactos finales al layout operacional de Storage. |
+| `pricing_mlops_notify_operational_decision` | `scripts/components/notify_operational_decision.py` | Valida y expone el payload de notificacion como nodo visible del pipeline. |
 
-Los steps de monitoreo se declaran en `src/pricing_mlops/monitoring/pipeline/registry.py` y ejecutan logica reusable de `src/pricing_mlops/monitoring/pipeline/steps/`. Asi Azure ML usa un wrapper comun, pero la logica versionable queda en modulos testeables.
+Arquitectura de paquetes:
 
-El notebook original queda como referencia del analista. La copia `notebooks/eda/auth_recommendation_monitoring_pipeline_abstraction.ipynb` es transicional para reemplazar logica inline por modulos.
+- `pricing.*` contiene la logica reusable derivada de notebooks y contratos de datos: validacion/curacion de inputs, monitoreo AUTH, feature engineering, baseline snapshots, scoring adapter y contratos de auditoria.
+- `pricing_mlops.*` contiene runtime/orquestacion: registry del pipeline, materializacion de artefactos, IO local y layout operacional.
+- `scripts/components/*` son wrappers Azure ML delgados: argumentos, descarga/subida y llamada a funciones importables.
+
+Los steps de monitoreo se declaran en `src/pricing_mlops/monitoring/pipeline/registry.py`. Azure ML usa un wrapper comun, los steps runtime viven en `src/pricing_mlops/monitoring/pipeline/steps/`, y las reglas de negocio/notebook se importan desde `pricing.auth_monitoring`.
+
+Los notebooks originales quedan como registro en `notebooks/eda/source-record/`. La copia `notebooks/eda/auth_recommendation_monitoring_pipeline_abstraction.ipynb` es transicional para reemplazar logica inline por modulos.
+
+Extensiones controladas ya disponibles fuera del camino default:
+
+- `pricing.scoring.score_recommendations` produce una nueva version de `model_output_snapshot.csv` desde una feature table validada, sin acoplarse a una implementacion unica de modelo.
+- `pricing.audit.write_sql_audit_records` materializa filas auditables para `model_run_log`, metadata de snapshots y decisiones operacionales antes de conectar una base SQL real.
+
+Brechas restantes contra el plan original:
+
+- enriquecer feature engineering con catalog bins/versiones cuando exista fuente general aprobada;
+- uso default de `pricing_mlops_build_baseline_snapshot` despues de aprobacion de negocio;
+- scoring real/modelo campeon y promocion/rollback sobre el adaptador;
+- conexion SQL productiva para logs, drift y snapshots;
+- notificacion externa real o dashboard operativo.
 
 ## Instalacion
 
@@ -94,11 +122,14 @@ Artefactos AUTH monitoring esperados:
 
 | Container | Archivo |
 |---|---|
-| `runs` | `model_run_log.json` y `summaries/*.csv` |
+| `runs` | `model_run_log.json`, `summaries/*.csv`, `summaries/notification_payload.json` y `summaries/simulated_operational_handoff.json` |
 | `snapshots` | `snapshots/*.csv` |
 | `drift-logs` | `logs/*.csv` |
-| `reports` | `reports/auth_recommendation_validity_report.md` |
+| `reports` | `reports/auth_recommendation_validity_report.md` y `reports/simulated_operational_handoff.md` |
 | `artifacts` | `manifest/artifact_manifest.json` y entradas auxiliares |
+
+`summaries/notification_payload.json` es el contrato estable para integrar notificaciones externas. La primera version solo publica el payload; no envia mensajes a Teams, Slack ni email.
+`summaries/simulated_operational_handoff.json` y `reports/simulated_operational_handoff.md` son evidencia placeholder del siguiente paso operativo que se tomaria segun el semaforo.
 
 Azure ML puede crear snapshots, environments, logs y artifacts internos en el storage runtime del workspace. Esos blobs no son outputs funcionales del modelo.
 

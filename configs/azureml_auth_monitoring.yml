@@ -6,11 +6,16 @@ environment: azureml/environment.yml
 
 components:
   - azureml/components/validate_prepare.yml
+  - azureml/components/build_baseline_snapshot.yml
+  - azureml/components/feature_engineering.yml
+  - azureml/components/prepare_current_auth_history.yml
   - azureml/components/build_monitoring_inputs.yml
   - azureml/components/calculate_recommendation_validity.yml
   - azureml/components/calculate_auth_history_drift.yml
   - azureml/components/calculate_operational_decision.yml
+  - azureml/components/simulate_operational_handoff.yml
   - azureml/components/publish_outputs.yml
+  - azureml/components/notify_operational_decision.yml
 
 pipeline: azureml/pipelines/auth_monitoring_pipeline.yml
 

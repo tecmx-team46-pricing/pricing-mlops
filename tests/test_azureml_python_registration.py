@@ -53,7 +53,7 @@ def test_load_release_config_resolves_paths():
     assert config.resource_group == "rg-pricing-mlops-main"
     assert config.workspace == "mlw-pmlops-06152240"
     assert config.environment.path == ROOT / "azureml/environment.yml"
-    assert len(config.components) == 6
+    assert len(config.components) == 11
     assert config.pipeline.path == ROOT / "azureml/pipelines/auth_monitoring_pipeline.yml"
     assert config.endpoint.name == "pricing-auth-monitoring"
     assert config.endpoint.deployment == "blue"

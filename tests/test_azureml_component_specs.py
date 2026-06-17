@@ -33,6 +33,53 @@ EXPECTED_COMPONENTS = {
             "previous_step_token",
         },
     },
+    "prepare_current_auth_history": {
+        "name": "pricing_mlops_prepare_current_auth_history",
+        "version": "0.1.0",
+        "entrypoint": "scripts/components/prepare_current_auth_history.py",
+        "inputs": {
+            "storage_account",
+            "input_container",
+            "input_blob_path",
+            "run_id",
+            "current_history_container",
+            "current_history_prefix",
+            "job_identity_client_id",
+            "previous_step_token",
+        },
+        "outputs": {"flow_token"},
+    },
+    "build_baseline_snapshot": {
+        "name": "pricing_mlops_build_baseline_snapshot",
+        "version": "0.1.0",
+        "entrypoint": "scripts/components/build_baseline_snapshot.py",
+        "inputs": {
+            "storage_account",
+            "feature_table_container",
+            "feature_table_blob_path",
+            "run_id",
+            "baseline_container",
+            "baseline_prefix",
+            "job_identity_client_id",
+        },
+        "outputs": {"flow_token"},
+    },
+    "feature_engineering": {
+        "name": "pricing_mlops_feature_engineering",
+        "version": "0.1.0",
+        "entrypoint": "scripts/components/feature_engineering.py",
+        "inputs": {
+            "storage_account",
+            "input_container",
+            "input_blob_path",
+            "run_id",
+            "feature_container",
+            "feature_prefix",
+            "job_identity_client_id",
+            "previous_step_token",
+        },
+        "outputs": {"flow_token"},
+    },
     "calculate_recommendation_validity": {
         "name": "pricing_mlops_calculate_recommendation_validity",
         "step": "calculate_recommendation_validity",
@@ -45,11 +92,19 @@ EXPECTED_COMPONENTS = {
     },
     "calculate_operational_decision": {
         "name": "pricing_mlops_calculate_operational_decision",
+        "version": "0.1.6",
         "step": "calculate_operational_decision",
+        "inputs": {"storage_account", "run_id", "job_identity_client_id", "previous_step_token"},
+    },
+    "simulate_operational_handoff": {
+        "name": "pricing_mlops_simulate_operational_handoff",
+        "version": "0.1.3",
+        "step": "simulate_operational_handoff",
         "inputs": {"storage_account", "run_id", "job_identity_client_id", "previous_step_token"},
     },
     "publish_outputs": {
         "name": "pricing_mlops_publish_outputs",
+        "version": "0.1.6",
         "entrypoint": "scripts/components/publish_outputs.py",
         "inputs": {
             "storage_account",
@@ -66,7 +121,22 @@ EXPECTED_COMPONENTS = {
             "job_identity_client_id",
             "previous_step_token",
         },
-        "outputs": set(),
+        "outputs": {"flow_token"},
+    },
+    "notify_operational_decision": {
+        "name": "pricing_mlops_notify_operational_decision",
+        "version": "0.1.0",
+        "entrypoint": "scripts/components/notify_operational_decision.py",
+        "inputs": {
+            "storage_account",
+            "run_id",
+            "environment",
+            "run_owner",
+            "trigger_type",
+            "job_identity_client_id",
+            "previous_step_token",
+        },
+        "outputs": {"flow_token"},
     },
 }
 
@@ -74,7 +144,10 @@ EXPECTED_COMPONENTS = {
 def test_azureml_component_specs_are_registered_units():
     for slug, expected in EXPECTED_COMPONENTS.items():
         component = yaml.safe_load((COMPONENT_DIR / f"{slug}.yml").read_text(encoding="utf-8"))
-        expected_version = MONITORING_COMPONENT_VERSION if "step" in expected else COMPONENT_VERSION
+        expected_version = expected.get(
+            "version",
+            MONITORING_COMPONENT_VERSION if "step" in expected else COMPONENT_VERSION,
+        )
 
         assert component["type"] == "command"
         assert component["name"] == expected["name"]
@@ -93,6 +166,10 @@ def test_azureml_component_specs_are_registered_units():
             assert f"--step {expected['step']}" in component["command"]
         else:
             assert expected["entrypoint"] in component["command"]
+        if slug == "publish_outputs":
+            assert "--run-artifacts-prefix component-state/${{inputs.run_id}}/simulate_operational_handoff" in component[
+                "command"
+            ]
         assert "pip install" not in component["command"]
 
 

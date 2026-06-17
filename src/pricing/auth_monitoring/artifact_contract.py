@@ -72,6 +72,18 @@ def expected_auth_monitoring_artifacts() -> dict[str, MonitoringArtifact]:
                 "text/csv",
             ),
             MonitoringArtifact(
+                "notification_payload",
+                Path("summaries/notification_payload.json"),
+                "runs",
+                "application/json",
+            ),
+            MonitoringArtifact(
+                "simulated_operational_handoff",
+                Path("summaries/simulated_operational_handoff.json"),
+                "runs",
+                "application/json",
+            ),
+            MonitoringArtifact(
                 "run_readiness_summary",
                 Path("summaries/run_readiness_summary.csv"),
                 "runs",
@@ -80,6 +92,12 @@ def expected_auth_monitoring_artifacts() -> dict[str, MonitoringArtifact]:
             MonitoringArtifact(
                 "auth_recommendation_validity_report",
                 Path("reports/auth_recommendation_validity_report.md"),
+                "reports",
+                "text/markdown",
+            ),
+            MonitoringArtifact(
+                "simulated_operational_handoff_report",
+                Path("reports/simulated_operational_handoff.md"),
                 "reports",
                 "text/markdown",
             ),

@@ -1,0 +1,41 @@
+$schema: https://azuremlschemas.azureedge.net/latest/commandComponent.schema.json
+type: command
+name: pricing_mlops_build_baseline_snapshot
+version: 0.1.0
+display_name: build_baseline_snapshot
+description: Build model_output_snapshot baseline from an approved feature table.
+code: ../..
+environment: azureml:pricing-mlops-runtime:0.1.0
+inputs:
+  storage_account:
+    type: string
+  feature_table_container:
+    type: string
+    default: curated
+  feature_table_blob_path:
+    type: string
+  run_id:
+    type: string
+  baseline_container:
+    type: string
+    default: artifacts
+  baseline_prefix:
+    type: string
+  job_identity_client_id:
+    type: string
+outputs:
+  flow_token:
+    type: uri_folder
+command: >-
+  MLOPS_USE_MANAGED_IDENTITY_CREDENTIAL=true
+  AZURE_ML_JOB_IDENTITY_CLIENT_ID=${{inputs.job_identity_client_id}}
+  python scripts/components/build_baseline_snapshot.py
+  --storage-account ${{inputs.storage_account}}
+  --feature-table-container ${{inputs.feature_table_container}}
+  --feature-table-blob-path ${{inputs.feature_table_blob_path}}
+  --output-dir outputs/baseline_snapshot
+  --run-id ${{inputs.run_id}}
+  --baseline-container ${{inputs.baseline_container}}
+  --baseline-prefix ${{inputs.baseline_prefix}} &&
+  mkdir -p ${{outputs.flow_token}} &&
+  echo build_baseline_snapshot > ${{outputs.flow_token}}/done.txt

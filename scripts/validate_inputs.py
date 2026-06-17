@@ -7,8 +7,8 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "src"))
 
-from pricing_mlops.preparation import read_csv_records
-from pricing_mlops.preparation.validation import validate_pricing_input
+from pricing.preparation import read_csv_records
+from pricing.preparation.validation import validate_pricing_input
 
 
 def main() -> int:

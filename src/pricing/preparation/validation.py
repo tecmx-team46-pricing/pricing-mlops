@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import Iterable, Mapping, Any
+from typing import Any, Iterable, Mapping
 
 
 REQUIRED_COLUMNS = ("kpn", "vpareadescription", "distysegment", "current_price")

@@ -1,0 +1,40 @@
+$schema: https://azuremlschemas.azureedge.net/latest/commandComponent.schema.json
+type: command
+name: pricing_mlops_notify_operational_decision
+version: 0.1.0
+display_name: notify_operational_decision
+description: Validate and surface AUTH operational decision notification payload as a visible pipeline node.
+code: ../..
+environment: azureml:pricing-mlops-runtime:0.1.0
+inputs:
+  storage_account:
+    type: string
+  run_id:
+    type: string
+  environment:
+    type: string
+  run_owner:
+    type: string
+  trigger_type:
+    type: string
+  job_identity_client_id:
+    type: string
+  previous_step_token:
+    type: uri_folder
+outputs:
+  flow_token:
+    type: uri_folder
+command: >-
+  test -f ${{inputs.previous_step_token}}/done.txt &&
+  MLOPS_USE_MANAGED_IDENTITY_CREDENTIAL=true
+  AZURE_ML_JOB_IDENTITY_CLIENT_ID=${{inputs.job_identity_client_id}}
+  python scripts/components/notify_operational_decision.py
+  --storage-account ${{inputs.storage_account}}
+  --environment ${{inputs.environment}}
+  --run-owner ${{inputs.run_owner}}
+  --run-id ${{inputs.run_id}}
+  --trigger-type ${{inputs.trigger_type}}
+  --output-dir outputs/notify_operational_decision &&
+  mkdir -p ${{outputs.flow_token}} &&
+  cp outputs/notify_operational_decision/notification_smoke_summary.json ${{outputs.flow_token}}/notification_smoke_summary.json &&
+  echo notify_operational_decision > ${{outputs.flow_token}}/done.txt

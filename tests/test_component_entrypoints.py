@@ -6,6 +6,9 @@ from pricing.auth_monitoring import expected_auth_monitoring_artifacts, validate
 from pricing_mlops.monitoring.pipeline.steps.auth_history_drift_step import run_auth_history_drift_step
 from pricing_mlops.monitoring.pipeline.steps.operational_decision_step import run_operational_decision_step
 from pricing_mlops.monitoring.pipeline.steps.recommendation_validity_step import run_recommendation_validity_step
+from pricing_mlops.monitoring.pipeline.steps.simulate_operational_handoff_step import (
+    run_simulate_operational_handoff_step,
+)
 
 
 SAMPLE_CSV = "\n".join(
@@ -42,6 +45,7 @@ def test_monitoring_step_registry_defines_azureml_owned_steps():
         "calculate_recommendation_validity",
         "calculate_auth_history_drift",
         "calculate_operational_decision",
+        "simulate_operational_handoff",
     )
 
     definition = get_monitoring_step("calculate_operational_decision")
@@ -61,6 +65,7 @@ def test_monitoring_components_write_step_artifacts(tmp_path):
     validity_dir = tmp_path / "validity"
     drift_dir = tmp_path / "drift"
     decision_dir = tmp_path / "decision"
+    handoff_dir = tmp_path / "handoff"
     snapshots_dir = input_dir / "snapshots"
     snapshots_dir.mkdir(parents=True)
     (snapshots_dir / "baseline_recommendation_snapshot.csv").write_text(
@@ -93,18 +98,51 @@ def test_monitoring_components_write_step_artifacts(tmp_path):
         output_dir=decision_dir,
         run_id="20260615T000000Z-auth-monitoring",
     )
+    run_simulate_operational_handoff_step(
+        input_dir=decision_dir,
+        output_dir=handoff_dir,
+        run_id="20260615T000000Z-auth-monitoring",
+    )
 
     assert (validity_dir / "logs" / "auth_recommendation_validity_log.csv").is_file()
     assert (validity_dir / "summaries" / "validity_revenue_summary.csv").is_file()
     assert (drift_dir / "logs" / "auth_history_drift_log.csv").is_file()
     assert (decision_dir / "summaries" / "run_readiness_summary.csv").is_file()
     assert (decision_dir / "summaries" / "operational_decision_summary.csv").is_file()
+    assert (decision_dir / "summaries" / "notification_payload.json").is_file()
     assert (decision_dir / "reports" / "auth_recommendation_validity_report.md").is_file()
-    assert validate_expected_monitoring_artifacts(decision_dir).is_complete
+    assert (handoff_dir / "summaries" / "simulated_operational_handoff.json").is_file()
+    assert (handoff_dir / "reports" / "simulated_operational_handoff.md").is_file()
+    notification_payload = json.loads((decision_dir / "summaries" / "notification_payload.json").read_text())
+    assert notification_payload == {
+        "schema_version": "auth_monitoring_notification_v1",
+        "run_id": "20260615T000000Z-auth-monitoring",
+        "severity": "critical",
+        "should_notify": True,
+        "blocking_decision": True,
+        "title": "Pricing AUTH monitoring: Red decision",
+        "status": "Red",
+        "recommended_operational_action": "REVIEW_RED_YELLOW_CASES_AND_RUN_RECOMMENDATION_REFRESH",
+        "primary_reason": "Existing recommendations have material actionable risk, but HB-SVI retraining requires separate model-health/price-drift evidence.",
+        "next_action_owner": "Pricing PM",
+        "decision_rationale": "Existing recommendations have material actionable risk, but HB-SVI retraining requires separate model-health/price-drift evidence.",
+        "signals": {
+            "price_drift_status": "Green",
+            "recommendation_validity_global_status": "Red",
+            "recommendation_coverage_status": "Green",
+            "catalog_bin_coverage_status": "Green",
+            "auth_history_drift_status": "Green",
+        },
+    }
+    report = (decision_dir / "reports" / "auth_recommendation_validity_report.md").read_text()
+    assert "## Operational Decision" in report
+    assert "## Signal Summary" in report
+    assert "## Recommended Next Step" in report
+    assert validate_expected_monitoring_artifacts(handoff_dir).is_complete
     expected_paths = {
         artifact.relative_path.as_posix()
         for artifact in expected_auth_monitoring_artifacts().values()
     }
     expected_paths.remove("manifest/artifact_manifest.json")
-    manifest = json.loads((decision_dir / "manifest" / "artifact_manifest.json").read_text())
+    manifest = json.loads((handoff_dir / "manifest" / "artifact_manifest.json").read_text())
     assert expected_paths.issubset({item["relative_path"] for item in manifest["artifacts"]})

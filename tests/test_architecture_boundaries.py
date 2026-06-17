@@ -26,6 +26,14 @@ FORBIDDEN_UNUSED_MLOPS_ROOT_MODULES = (
     Path("src/pricing_mlops/types.py"),
 )
 
+FORBIDDEN_DOMAIN_MODULES_IN_MLOPS_RUNTIME = (
+    Path("src/pricing_mlops/baseline"),
+    Path("src/pricing_mlops/features"),
+    Path("src/pricing_mlops/preparation"),
+    Path("src/pricing_mlops/scoring"),
+    Path("src/pricing_mlops/audit"),
+)
+
 FORBIDDEN_LEGACY_MONITORING_IMPORTS = (
     ".".join(("pricing_mlops", "monitoring", "domain", "notebook_logic")),
     ".".join(("pricing_mlops", "monitoring", "steps")),
@@ -106,6 +114,73 @@ def test_removed_mlops_root_placeholders_stay_removed():
     ]
 
     assert existing_paths == []
+
+
+def test_notebook_derived_domain_modules_live_under_pricing_package():
+    repo_root = Path(__file__).resolve().parents[1]
+
+    expected_domain_modules = [
+        Path("src/pricing/auth_monitoring"),
+        Path("src/pricing/preparation"),
+        Path("src/pricing/baseline"),
+        Path("src/pricing/features"),
+        Path("src/pricing/scoring"),
+        Path("src/pricing/audit"),
+    ]
+    missing_modules = [
+        path.as_posix()
+        for path in expected_domain_modules
+        if not (repo_root / path / "__init__.py").exists()
+    ]
+    forbidden_runtime_modules = [
+        path.as_posix()
+        for path in FORBIDDEN_DOMAIN_MODULES_IN_MLOPS_RUNTIME
+        if (repo_root / path).exists()
+        and any(child.name != "__pycache__" for child in (repo_root / path).iterdir())
+    ]
+
+    assert missing_modules == []
+    assert forbidden_runtime_modules == []
+
+
+def test_component_wrappers_call_shared_domain_or_runtime_modules():
+    repo_root = Path(__file__).resolve().parents[1]
+    component_imports = {
+        "scripts/components/build_baseline_snapshot.py": "from pricing.baseline import build_baseline_snapshot",
+        "scripts/components/feature_engineering.py": "from pricing.features import build_current_auth_features",
+        "scripts/components/validate_prepare.py": "from pricing.preparation import",
+        "scripts/components/run_monitoring_step.py": "from pricing_mlops.monitoring.pipeline.registry import",
+    }
+
+    violations = {
+        path: expected_import
+        for path, expected_import in component_imports.items()
+        if expected_import not in (repo_root / path).read_text(encoding="utf-8")
+    }
+
+    assert violations == {}
+
+
+def test_transitional_notebook_imports_shared_pricing_package():
+    repo_root = Path(__file__).resolve().parents[1]
+    notebook = (
+        repo_root
+        / "notebooks"
+        / "eda"
+        / "auth_recommendation_monitoring_pipeline_abstraction.ipynb"
+    )
+    text = notebook.read_text(encoding="utf-8")
+    expected_imports = (
+        "from pricing.auth_monitoring import",
+        "from pricing.features import build_current_auth_features",
+        "from pricing.baseline import build_baseline_snapshot",
+        "from pricing.scoring import score_recommendations",
+        "from pricing.audit import build_sql_audit_records, write_sql_audit_records",
+    )
+
+    missing_imports = [expected for expected in expected_imports if expected not in text]
+
+    assert missing_imports == []
 
 
 def test_old_monitoring_imports_are_not_reintroduced():

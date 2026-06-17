@@ -66,7 +66,7 @@ def test_publish_outputs_rejects_incomplete_auth_monitoring_contract(tmp_path):
     artifacts = [
         path
         for path in module.REQUIRED_AUTH_MONITORING_ARTIFACTS
-        if path != "reports/auth_recommendation_validity_report.md"
+        if path != "summaries/simulated_operational_handoff.json"
     ]
     _write_required_artifacts(tmp_path, artifacts)
 
@@ -95,7 +95,7 @@ def test_publish_outputs_rejects_incomplete_auth_monitoring_contract(tmp_path):
             },
         )
     except FileNotFoundError as exc:
-        assert "reports/auth_recommendation_validity_report.md" in str(exc)
+        assert "summaries/simulated_operational_handoff.json" in str(exc)
     else:
         raise AssertionError("Incomplete artifact contract should fail before upload")
 
