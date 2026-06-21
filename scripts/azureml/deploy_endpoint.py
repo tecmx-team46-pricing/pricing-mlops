@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import os
 import sys
 from pathlib import Path
 
@@ -34,7 +35,16 @@ def _pipeline_component_from_manifest(manifest_path: Path) -> str:
     return component
 
 
-def _load_pipeline_deployment(source_file: Path, component_id: str) -> PipelineComponentBatchDeployment:
+def _endpoint_name_from_environment(default_name: str) -> str:
+    return os.environ.get("AZURE_ML_BATCH_ENDPOINT") or default_name
+
+
+def _load_pipeline_deployment(
+    source_file: Path,
+    component_id: str,
+    *,
+    endpoint_name: str,
+) -> PipelineComponentBatchDeployment:
     data = yaml.safe_load(source_file.read_text(encoding="utf-8"))
     if not isinstance(data, dict):
         raise ValueError(f"Deployment YAML must be a mapping: {source_file}")
@@ -44,7 +54,7 @@ def _load_pipeline_deployment(source_file: Path, component_id: str) -> PipelineC
 
     return PipelineComponentBatchDeployment(
         name=data["name"],
-        endpoint_name=data["endpoint_name"],
+        endpoint_name=endpoint_name,
         component=component_id,
         settings=settings,
     )
@@ -58,15 +68,21 @@ def main() -> None:
     ml_client = build_ml_client(settings)
 
     pipeline_component = _pipeline_component_from_manifest(config.manifest.path)
-    print(f"Creating/updating batch endpoint {config.endpoint.name}")
+    endpoint_name = _endpoint_name_from_environment(config.endpoint.name)
+    print(f"Creating/updating batch endpoint {endpoint_name}")
     endpoint = load_batch_endpoint(config.endpoint.endpoint_file.path)
+    endpoint.name = endpoint_name
     ml_client.batch_endpoints.begin_create_or_update(endpoint).result()
 
     print(f"Creating/updating batch deployment {config.endpoint.deployment} with {pipeline_component}")
-    deployment = _load_pipeline_deployment(config.endpoint.deployment_file.path, pipeline_component)
+    deployment = _load_pipeline_deployment(
+        config.endpoint.deployment_file.path,
+        pipeline_component,
+        endpoint_name=endpoint_name,
+    )
     ml_client.batch_deployments.begin_create_or_update(deployment).result()
 
-    print(f"Batch endpoint ready: {config.endpoint.name}/{config.endpoint.deployment}")
+    print(f"Batch endpoint ready: {endpoint_name}/{config.endpoint.deployment}")
 
 
 if __name__ == "__main__":

@@ -135,11 +135,22 @@ Azure ML puede crear snapshots, environments, logs y artifacts internos en el st
 
 ## Documentacion
 
+- Sitio GitHub Pages: `https://tecmx-team46-pricing.github.io/pricing-mlops/`
 - [`docs/runbook.md`](docs/runbook.md)
 - [`docs/auth-monitoring-configuration.md`](docs/auth-monitoring-configuration.md)
 - [`docs/platform-contract.md`](docs/platform-contract.md)
 - [`docs/compute-target-contract.md`](docs/compute-target-contract.md)
 - [`docs/data-governance.md`](docs/data-governance.md)
+
+Para servir la documentacion localmente:
+
+```bash
+python -m pip install -r requirements-docs.txt
+mkdocs serve
+mkdocs build --strict
+```
+
+GitHub Pages debe estar configurado con source `GitHub Actions`. El workflow `docs` construye en pull request y despliega en `push` a `main` o `workflow_dispatch`.
 
 ## Limites
 

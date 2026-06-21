@@ -4,6 +4,7 @@ import yaml
 
 from scripts.azureml.client import AzureMlSettings
 from scripts.azureml.config import load_release_config
+from scripts.azureml import deploy_endpoint
 
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -71,6 +72,22 @@ def test_azureml_settings_uses_env_overrides(monkeypatch):
     assert settings.subscription_id == "sub-from-env"
     assert settings.resource_group == "rg-from-env"
     assert settings.workspace == "workspace-from-env"
+
+
+def test_deploy_endpoint_uses_runtime_endpoint_name_override(monkeypatch):
+    monkeypatch.setenv("AZURE_ML_BATCH_ENDPOINT", "pricing-auth-monitoring-v46")
+
+    assert hasattr(deploy_endpoint, "_endpoint_name_from_environment")
+
+    endpoint_name = deploy_endpoint._endpoint_name_from_environment("pricing-auth-monitoring")
+    deployment = deploy_endpoint._load_pipeline_deployment(
+        ROOT / "azureml" / "endpoints" / "auth-monitoring-batch-deployment.yml",
+        "azureml:pricing_mlops_auth_monitoring_pipeline:0.1.18",
+        endpoint_name=endpoint_name,
+    )
+
+    assert endpoint_name == "pricing-auth-monitoring-v46"
+    assert deployment.endpoint_name == "pricing-auth-monitoring-v46"
 
 
 def test_register_assets_uses_python_sdk_loaders():

@@ -21,6 +21,7 @@ configs/environments/*.env
 runs/
 outputs/
 artifacts/
+site/
 reports/generated/
 reports/**/*.html
 reports/**/*.pdf

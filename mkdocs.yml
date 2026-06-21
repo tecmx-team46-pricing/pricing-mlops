@@ -1,0 +1,69 @@
+site_name: Pricing MLOps
+site_description: Documentacion operativa del repo funcional Pricing MLOps Team 46
+site_author: Team 46
+site_url: https://tecmx-team46-pricing.github.io/pricing-mlops/
+repo_url: https://github.com/tecmx-team46-pricing/pricing-mlops
+repo_name: pricing-mlops
+
+docs_dir: docs
+site_dir: site
+use_directory_urls: true
+
+theme:
+  name: material
+  language: es
+  features:
+    - navigation.sections
+    - navigation.top
+    - navigation.indexes
+    - toc.integrate
+    - content.code.copy
+    - content.tabs.link
+  palette:
+    - scheme: default
+      primary: indigo
+      accent: blue
+      toggle:
+        icon: material/weather-night
+        name: Cambiar a modo oscuro
+    - scheme: slate
+      primary: indigo
+      accent: blue
+      toggle:
+        icon: material/weather-sunny
+        name: Cambiar a modo claro
+
+plugins:
+  - search:
+      lang: es
+
+markdown_extensions:
+  - admonition
+  - attr_list
+  - md_in_html
+  - tables
+  - toc:
+      permalink: true
+  - pymdownx.details
+  - pymdownx.superfences:
+      custom_fences:
+        - name: mermaid
+          class: mermaid
+          format: !!python/name:pymdownx.superfences.fence_code_format
+
+nav:
+  - Inicio: index.md
+  - Quick Start:
+      - Notebook a Azure ML: quickstart/notebooks-to-azureml.md
+      - Correr pipeline: quickstart/run-pipeline.md
+  - Azure ML:
+      - Assets y versionado: azureml/assets.md
+      - Pipeline AUTH monitoring: azureml/pipeline.md
+      - GitHub Actions: azureml/github-actions.md
+  - Operacion:
+      - Runbook: operations/runbook.md
+  - Referencia:
+      - Gobierno de datos: reference/data-governance.md
+      - Contrato de plataforma: platform-contract.md
+      - Compute target: compute-target-contract.md
+      - Configuracion AUTH: auth-monitoring-configuration.md
