@@ -9,13 +9,15 @@ REGISTER_SCRIPT = ROOT / "scripts" / "register_azureml_components.sh"
 REGISTER_ASSETS = ROOT / "scripts" / "azureml" / "register_assets.py"
 RELEASE_CONFIG = ROOT / "configs" / "azureml_auth_monitoring.yml"
 AMLIGNORE = ROOT / ".amlignore"
-COMPONENT_VERSION = "0.1.2"
+COMPONENT_VERSION = "0.1.3"
+VALIDATE_PREPARE_COMPONENT_VERSION = "0.1.5"
 MONITORING_COMPONENT_VERSION = "0.1.3"
 RUNTIME_ENVIRONMENT = "azureml:pricing-mlops-runtime:0.1.0"
 
 EXPECTED_COMPONENTS = {
     "validate_prepare": {
         "name": "pricing_mlops_validate_prepare",
+        "version": VALIDATE_PREPARE_COMPONENT_VERSION,
         "entrypoint": "scripts/components/validate_prepare.py",
         "inputs": {"storage_account", "input_blob_path", "run_id", "job_identity_client_id"},
     },
@@ -210,7 +212,7 @@ def test_runtime_environment_spec_is_versioned_in_model_repo():
 def test_amlignore_keeps_component_snapshots_small_and_masked():
     ignored = AMLIGNORE.read_text(encoding="utf-8")
 
-    for pattern in ("notebooks/", "tests/", "docs/", "data/samples/unmasked/", ".github/"):
+    for pattern in ("notebooks/", "tests/", "docs/", "data/inbox/**", "data/samples/unmasked/", ".github/"):
         assert pattern in ignored
 
 

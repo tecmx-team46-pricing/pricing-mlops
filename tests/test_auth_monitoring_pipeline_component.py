@@ -11,8 +11,9 @@ REGISTER_SCRIPT = ROOT / "scripts" / "register_azureml_components.sh"
 REGISTER_ASSETS = ROOT / "scripts" / "azureml" / "register_assets.py"
 WORKFLOW_FILE = ROOT / ".github" / "workflows" / "azureml-components.yml"
 
-PIPELINE_VERSION = "0.1.17"
-FUNCTIONAL_COMPONENT_VERSION = "0.1.2"
+PIPELINE_VERSION = "0.1.18"
+VALIDATE_PREPARE_COMPONENT_VERSION = "0.1.5"
+FUNCTIONAL_COMPONENT_VERSION = "0.1.3"
 MONITORING_COMPONENT_VERSION = "0.1.3"
 FEATURE_ENGINEERING_COMPONENT = "azureml:pricing_mlops_feature_engineering:0.1.0"
 PREPARE_CURRENT_HISTORY_COMPONENT = "azureml:pricing_mlops_prepare_current_auth_history:0.1.0"
@@ -22,7 +23,7 @@ SIMULATE_COMPONENT = "azureml:pricing_mlops_simulate_operational_handoff:0.1.3"
 NOTIFY_COMPONENT = "azureml:pricing_mlops_notify_operational_decision:0.1.0"
 
 EXPECTED_FUNCTIONAL_COMPONENTS = {
-    "validate_prepare": ("pricing_mlops_validate_prepare", FUNCTIONAL_COMPONENT_VERSION),
+    "validate_prepare": ("pricing_mlops_validate_prepare", VALIDATE_PREPARE_COMPONENT_VERSION),
     "build_monitoring_inputs": "pricing_mlops_build_monitoring_inputs",
     "calculate_recommendation_validity": "pricing_mlops_calculate_recommendation_validity",
     "calculate_auth_history_drift": "pricing_mlops_calculate_auth_history_drift",

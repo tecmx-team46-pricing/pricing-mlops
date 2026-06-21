@@ -8,7 +8,7 @@ Repositorio funcional y operacional del flujo Pricing MLOps AUTH monitoring. Est
 
 ```text
 Azure ML batch endpoint pricing-auth-monitoring/blue
--> pricing_mlops_auth_monitoring_pipeline:0.1.17
+-> pricing_mlops_auth_monitoring_pipeline:0.1.18
 -> validate_prepare
 -> feature_engineering
 -> prepare_current_auth_history

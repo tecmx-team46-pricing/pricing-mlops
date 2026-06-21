@@ -15,6 +15,63 @@ def test_validates_required_columns_and_non_empty_dataset():
         validate_pricing_input(incomplete)
 
 
+def test_requires_current_price_or_rslpriceusd_price_column():
+    frame = [
+        {
+            "kpn": "KPN-001",
+            "vpareadescription": "north",
+            "distysegment": "enterprise",
+        }
+    ]
+
+    with pytest.raises(ValueError, match="current_price or rslpriceusd"):
+        validate_pricing_input(frame)
+
+
+def test_accepts_rslpriceusd_as_current_price_alias():
+    frame = [
+        {
+            "kpn": "KPN-001",
+            "vpareadescription": "north",
+            "distysegment": "enterprise",
+            "rslpriceusd": 10.0,
+        }
+    ]
+
+    result = validate_pricing_input(frame)
+
+    assert result.row_count == 1
+    assert result.status == "passed"
+
+
+def test_allows_duplicate_keys_for_transactional_inputs_before_aggregation():
+    frame = [
+        {
+            "date": "2026-06-01",
+            "invoicenumber": "INV-001",
+            "kpn": "KPN-001",
+            "vpareadescription": "north",
+            "distysegment": "enterprise",
+            "rslpriceusd": 10.0,
+            "quantity": 1,
+        },
+        {
+            "date": "2026-06-02",
+            "invoicenumber": "INV-002",
+            "kpn": "KPN-001",
+            "vpareadescription": "north",
+            "distysegment": "enterprise",
+            "rslpriceusd": 11.0,
+            "quantity": 2,
+        },
+    ]
+
+    result = validate_pricing_input(frame)
+
+    assert result.row_count == 2
+    assert result.status == "passed"
+
+
 def test_validates_percentile_monotonicity_when_columns_exist():
     frame = [
         {

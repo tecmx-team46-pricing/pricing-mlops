@@ -27,6 +27,7 @@ reports/**/*.pdf
 reports/**/*.docx
 
 # Real or large data files
+data/inbox/**
 data/samples/unmasked/**
 !data/samples/unmasked/.gitignore
 data/**/*.parquet

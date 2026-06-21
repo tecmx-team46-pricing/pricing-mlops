@@ -4,8 +4,9 @@ from dataclasses import dataclass
 from typing import Any, Iterable, Mapping
 
 
-REQUIRED_COLUMNS = ("kpn", "vpareadescription", "distysegment", "current_price")
 KEY_COLUMNS = ("kpn", "vpareadescription", "distysegment")
+PRICE_COLUMNS = ("current_price", "rslpriceusd")
+TRANSACTIONAL_COLUMNS = ("date", "dateperiod", "invoicenumber", "quantity")
 PERCENTILE_COLUMNS = ("P0_PRICE", "P20_PRICE", "P50_PRICE", "P85_PRICE", "P100_PRICE")
 
 
@@ -22,9 +23,11 @@ def validate_pricing_input(records: Iterable[Mapping[str, Any]]) -> ValidationRe
         raise ValueError("dataset is empty")
 
     columns = list(rows[0].keys())
-    missing = [column for column in REQUIRED_COLUMNS if column not in columns]
+    missing = [column for column in KEY_COLUMNS if column not in columns]
     if missing:
         raise ValueError(f"missing required columns: {', '.join(missing)}")
+    if not any(column in columns for column in PRICE_COLUMNS):
+        raise ValueError("missing required price column: current_price or rslpriceusd")
 
     if all(column in columns for column in PERCENTILE_COLUMNS):
         for index, row in enumerate(rows, start=1):
@@ -35,7 +38,7 @@ def validate_pricing_input(records: Iterable[Mapping[str, Any]]) -> ValidationRe
                     f"{index}: {', '.join(PERCENTILE_COLUMNS)}"
                 )
 
-    if all(column in columns for column in KEY_COLUMNS):
+    if all(column in columns for column in KEY_COLUMNS) and not _is_transactional_input(columns):
         seen: set[tuple[str, str, str]] = set()
         for row in rows:
             key = tuple(str(row[column]) for column in KEY_COLUMNS)
@@ -47,6 +50,10 @@ def validate_pricing_input(records: Iterable[Mapping[str, Any]]) -> ValidationRe
             seen.add(key)
 
     return ValidationResult(status="passed", row_count=len(rows), columns=columns)
+
+
+def _is_transactional_input(columns: list[str]) -> bool:
+    return any(column in columns for column in TRANSACTIONAL_COLUMNS)
 
 
 def _to_float(value: Any, column: str, row_index: int) -> float:

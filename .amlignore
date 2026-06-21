@@ -15,4 +15,5 @@ tests/
 runs/
 outputs/
 artifacts/
+data/inbox/**
 data/samples/unmasked/

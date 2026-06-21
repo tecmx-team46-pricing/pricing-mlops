@@ -1,7 +1,7 @@
 $schema: https://azuremlschemas.azureedge.net/latest/pipelineComponent.schema.json
 type: pipeline
 name: pricing_mlops_auth_monitoring_pipeline
-version: 0.1.17
+version: 0.1.18
 display_name: Pricing MLOps AUTH monitoring pipeline component
 description: AUTH monitoring pipeline assembled and published from pricing-mlops components.
 inputs:
@@ -57,7 +57,7 @@ jobs:
   validate_prepare:
     type: command
     compute: azureml:cpu-cluster
-    component: azureml:pricing_mlops_validate_prepare:0.1.2
+    component: azureml:pricing_mlops_validate_prepare:0.1.5
     inputs:
       storage_account: ${{parent.inputs.storage_account}}
       input_blob_path: ${{parent.inputs.input_blob_path}}
