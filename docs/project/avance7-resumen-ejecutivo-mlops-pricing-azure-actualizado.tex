@@ -311,7 +311,7 @@ La conclusión es madura: el sistema no dice ``nunca reentrenar'', sino ``reentr
 
 \section{Análisis costo-beneficio actualizado}
 
-El beneficio principal es control del ciclo de vida del modelo. El ahorro de GPU se mantiene como beneficio secundario porque, si la corrida de entrenamiento es corta, el ahorro directo de cómputo puede ser marginal. El ahorro más sólido proviene de reducir retraining y validaciones innecesarias.
+El beneficio principal es control del ciclo de vida del modelo. El ahorro de GPU se vuelve relevante cuando el proceso actual de negocio reentrena el modelo mensualmente en una NVIDIA A10. En ese caso, el monitoreo de drift convierte el gasto de GPU de un costo fijo por calendario a una decisión condicionada por evidencia. El ahorro más sólido combina cómputo evitado, menor carga de validación y menor riesgo de cambiar un modelo estable sin necesidad.
 
 \begin{tabularx}{\linewidth}{L{0.23\linewidth}L{0.32\linewidth}L{0.28\linewidth}L{0.12\linewidth}}
 \toprule
@@ -321,10 +321,27 @@ Gobernanza de modelo & Decidir retraining con métricas y baseline. & Política 
 Estabilidad operativa & Evitar cambiar modelos estables sin necesidad. & Con 6 meses posteriores no se justificó retrain completo. & Alta \\
 Trazabilidad & Registrar datos, código, outputs y decisión. & run logs, snapshots, drift logs, handoff y registros auditables; SQL productivo pendiente. & Alta \\
 Ahorro operativo & Menos validaciones/retrabajo por entrenamientos innecesarios. & Horas de revisión evitadas por ciclo. & Media-alta \\
-Ahorro de cómputo & Menos uso de GPU cuando no hay señal de retrain. & Beneficio secundario; depende de duración de corrida. & Media \\
+Ahorro de cómputo & Menos uso de GPU A10 cuando no hay señal de retrain. & Evitar retraining mensual cuando drift no justifica nueva versión. & Alta \\
 Escalabilidad & El monitoreo puede automatizarse antes del retraining. & Gating previo a entrenamiento. & Alta \\
 \bottomrule
 \end{tabularx}
+
+\subsection{Impacto de evitar retraining mensual en GPU A10}
+
+El dato operativo de referencia es que, en la empresa, el modelo se entrena cada mes en una GPU NVIDIA A10. Para estimar el orden de magnitud en cloud, la Azure Retail Prices API reporta \texttt{Standard\_NV36ads\_A10\_v5} en \texttt{eastus2} a USD 3.20 por hora. En contraste, el monitoreo actual corre en \texttt{cpu-cluster} con \texttt{STANDARD\_DS2\_V2}, aproximadamente USD 0.114 por hora. Por eso, una corrida de drift cuesta centavos, mientras que un retraining A10 puede costar decenas o cientos de dólares según duración.
+
+\begin{tabularx}{\linewidth}{L{0.24\linewidth}L{0.20\linewidth}L{0.22\linewidth}Y}
+\toprule
+\textbf{Duración del retraining mensual} & \textbf{Costo por retrain A10} & \textbf{Costo anual por calendario} & \textbf{Lectura ejecutiva} \\
+\midrule
+4 horas & USD 12.80 & USD 153.60 & Ahorro directo moderado; sigue evitando validación innecesaria. \\
+8 horas & USD 25.60 & USD 307.20 & Ya hay ahorro visible si varios meses no requieren retraining. \\
+24 horas & USD 76.80 & USD 921.60 & El gating por drift puede evitar casi mil dólares anuales por modelo. \\
+48 horas & USD 153.60 & USD 1,843.20 & El valor económico se vuelve material, además de liberar capacidad GPU. \\
+\bottomrule
+\end{tabularx}
+
+Si la NVIDIA A10 es on-premise o ya está asignada por contrato interno, el ahorro puede no aparecer como reducción directa de factura cloud. Aun así, se conserva como costo de oportunidad: horas GPU liberadas, menor retrabajo de validación y menor riesgo de introducir una versión nueva sin evidencia.
 
 \subsection*{Nota de interpretación de riesgos}
 
