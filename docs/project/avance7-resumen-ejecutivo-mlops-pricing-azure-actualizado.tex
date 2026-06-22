@@ -341,7 +341,28 @@ El dato operativo de referencia es que, en la empresa, el modelo se entrena cada
 \bottomrule
 \end{tabularx}
 
+El costo por calendario es el límite superior del gasto, no el ahorro. El ahorro real depende de cuántos de esos doce meses presentan evidencia de drift suficiente para reentrenar. Si el drift solo justifica $n$ retrainings en el año, se evitan los $12 - n$ restantes; el ahorro de cómputo es $(12 - n)$ veces el costo de un retraining, y el costo del monitoreo es prácticamente ruido frente a ese término.
+
+\begin{tabularx}{\linewidth}{L{0.22\linewidth}L{0.18\linewidth}L{0.18\linewidth}Y}
+\toprule
+\textbf{Duración del retraining} & \textbf{2 retrains/año (evita 10)} & \textbf{4 retrains/año (evita 8)} & \textbf{6 retrains/año (evita 6)} \\
+\midrule
+4 horas & USD 128.00 & USD 102.40 & USD 76.80 \\
+8 horas & USD 256.00 & USD 204.80 & USD 153.60 \\
+24 horas & USD 768.00 & USD 614.40 & USD 460.80 \\
+48 horas & USD 1,536.00 & USD 1,228.80 & USD 921.60 \\
+\bottomrule
+\end{tabularx}
+
+La lectura es directa: con retrainings largos y drift poco frecuente, el ahorro de cómputo va de cientos a más de mil dólares anuales por modelo. En el peor caso, cuando el mercado cambia los doce meses, el ahorro de cómputo es cero, pero el modelo se reentrena con evidencia y traza auditable, no a ciegas; nunca se gasta de más respecto al calendario actual.
+
+El otro lado de la comparación es que monitorear es casi gratis. Una corrida de drift sobre las features agregadas corre en \texttt{cpu-cluster} en minutos; aun monitoreando a diario, el costo anual de monitoreo (aproximadamente USD 10 a USD 40 según el tiempo de arranque del clúster) es menor que un solo retraining A10 de 24 horas. Esto desacopla la frecuencia de detección de la frecuencia de retraining: se puede vigilar el modelo todos los días y reentrenarlo solo cuando hay evidencia, en vez de pagar GPU una vez al mes y aun así detectar el drift tarde.
+
+El cómputo evitado es solo la capa visible del ahorro. Cada retraining por calendario también consume horas de validación de la nueva versión y agrega riesgo de cambiar un modelo estable sin necesidad; el gating por drift elimina esos dos costos en los meses sin evidencia y libera capacidad GPU para otros trabajos. Por eso el beneficio económico total es mayor que la sola diferencia de factura cloud.
+
 Si la NVIDIA A10 es on-premise o ya está asignada por contrato interno, el ahorro puede no aparecer como reducción directa de factura cloud. Aun así, se conserva como costo de oportunidad: horas GPU liberadas, menor retrabajo de validación y menor riesgo de introducir una versión nueva sin evidencia.
+
+\statusbox{\textbf{Lectura económica:} basta con que el drift evite un (1) retraining al año para que todo el monitoreo, incluso diario, quede pagado varias veces; a partir de ahí el ahorro escala con la duración del retraining y con cada mes que no requiere una versión nueva. El supuesto es que el drift material ocurre menos de doce veces al año; un backstop de antigüedad máxima del modelo acota el riesgo de conservar una versión vieja.}
 
 \subsection*{Nota de interpretación de riesgos}
 
