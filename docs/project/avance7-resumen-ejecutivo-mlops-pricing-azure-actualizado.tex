@@ -110,6 +110,8 @@ La conclusión ejecutiva más importante es que el principal valor del proyecto 
 
 Con seis meses posteriores de datos AUTH, el análisis de drift mostró que no existe una señal crítica suficiente para justificar un reentrenamiento completo del HB-SVI. La decisión correcta es conservar el modelo actual, ejecutar scoring/update para nuevos combos cuando aplique, registrar la evidencia y continuar monitoreando. En la arquitectura vigente, esa capacidad vive como monitoreo operacional/pre-model dentro del pipeline de Azure ML; la medición completa de model health HB-SVI/S-curve sigue siendo la siguiente capa de madurez.
 
+Este resumen integra los avances previos en una sola narrativa --el problema de negocio, los hallazgos del análisis exploratorio y de preparación, el modelo elegido con sus especificaciones, y las recomendaciones de implementación-- bajo un mismo hilo conductor: reentrenar por evidencia, no por calendario.
+
 \begin{figure}[htbp]
   \centering
   \begin{tikzpicture}[
@@ -364,24 +366,48 @@ Si la NVIDIA A10 es on-premise o ya está asignada por contrato interno, el ahor
 
 \statusbox{\textbf{Lectura económica:} basta con que el drift evite un (1) retraining al año para que todo el monitoreo, incluso diario, quede pagado varias veces; a partir de ahí el ahorro escala con la duración del retraining y con cada mes que no requiere una versión nueva. El supuesto es que el drift material ocurre menos de doce veces al año; un backstop de antigüedad máxima del modelo acota el riesgo de conservar una versión vieja.}
 
+\subsection{Beneficios tangibles e intangibles}
+
+\textbf{Tangibles (cuantificables).}
+\begin{itemize}
+  \item Cómputo GPU evitado: entre USD 76 y USD 1,536 al año por modelo, según la duración del retraining y la frecuencia real de drift (tabla anterior).
+  \item Horas de validación evitadas: si cada retraining por calendario consume del orden de 4 a 8 horas de validación de la nueva versión en el proceso de negocio, evitar 8 de 12 al año libera aproximadamente 32 a 64 horas por modelo al año.
+  \item Capacidad GPU liberada: cada mes sin retraining innecesario devuelve horas de A10 a otros trabajos.
+  \item Costo de monitoreo marginal: vigilar a diario cuesta menos que un solo retraining A10 de 24 horas.
+\end{itemize}
+
+\textbf{Intangibles (cualitativos).}
+\begin{itemize}
+  \item Gobernanza con evidencia: reentrenar deja de depender del calendario o la intuición. Ejemplo: con seis meses de datos AUTH el drift no justificó retraining completo, y esa decisión quedó respaldada por métricas y no por rutina.
+  \item Menor riesgo de cambio: no se introduce una versión nueva sobre un modelo estable sin señal, evitando inestabilidad de precios frente a negocio.
+  \item Auditabilidad: cada corrida deja run logs, snapshots y contratos que permiten reconstruir por qué se tomó una decisión.
+  \item Detección más temprana: como el monitoreo es barato, puede correr más seguido que el calendario y detectar drift a mitad de ciclo.
+  \item Confianza de negocio: las señales Yellow/Red priorizadas por revenue habilitan conversaciones accionables en lugar de alarmas genéricas.
+\end{itemize}
+
 \subsection*{Nota de interpretación de riesgos}
 
 El drift implementado monitorea cambios operativos en datos, cobertura, precio e historia AUTH. No debe interpretarse como medición completa de degradación predictiva del HB-SVI. La siguiente capa de MLOps debe comparar demanda estimada por la S-curve contra demanda real y evaluar si las elasticidades siguen explicando la historia nueva.
 
 \subsection{Costos por fase CRISP-ML}
 
-\begin{tabularx}{\linewidth}{L{0.24\linewidth}L{0.25\linewidth}L{0.18\linewidth}Y}
+Este es un proyecto de MLOps puro: el equipo no entrena el modelo --eso pertenece al proceso de Data Science y de negocio--, por lo que no hay costo de cómputo de entrenamiento del lado de la plataforma. Como no se manejan facturas separadas ni horas registradas, el costo se estima por características de la arquitectura: el inventario de recursos según su SKU y patrón de uso, valuado con la Azure Retail Prices API (\texttt{eastus2}, Linux). El costo grande --la GPU A10 de retraining-- es del proceso de negocio, y es justo el que esta solución vuelve condicional.
+
+\begin{tabularx}{\linewidth}{L{0.19\linewidth}L{0.31\linewidth}L{0.18\linewidth}Y}
 \toprule
-\textbf{Fase} & \textbf{Costo principal} & \textbf{Rango estimado MVP} & \textbf{Justificación} \\
+\textbf{Fase CRISP-ML} & \textbf{Recurso / característica} & \textbf{Costo (orden de magnitud)} & \textbf{Naturaleza} \\
 \midrule
-Business/Data Understanding & Alineación y EDA. & Bajo-medio & Principalmente horas de equipo. \\
-Data Preparation & Masking, features, baseline. & Medio & Trabajo analítico y storage bajo. \\
-Modeling & HB-SVI y lógica de pricing. & Medio-alto & Fase más costosa en tiempo técnico. \\
-Evaluation & Baseline, drift, validaciones. & Medio & Permite gobernar retraining. \\
-Deployment & Azure ML batch endpoint, pipeline component, Storage MLOps e IaC de plataforma. & Medio & Infra administrada/bajo demanda sin Function intermedia. \\
-Monitoring & Drift operacional/pre-model periódico. & Bajo recurrente & Evita retraining fijo y revisión innecesaria. \\
+Business/Data Understanding & Sin infraestructura; análisis y EDA sobre datos masked. & USD 0 & No recurrente. \\
+Data Preparation & Storage \texttt{Standard\_LRS} para masked/curated/baseline (pocos GB). & Centavos al mes & Recurrente bajo. \\
+Modeling & Modelo HB-SVI externo/pre-entrenado; el equipo solo lo integra, sin GPU del lado de la plataforma. & USD 0 en plataforma & N/A para la plataforma. \\
+Evaluation & Baseline, drift y validaciones en \texttt{cpu-cluster} \texttt{DS2\_v2} (USD 0.114/h), que escala a cero. & Aprox. USD 0.06-0.11 por corrida & Recurrente por corrida. \\
+Deployment & AML Workspace (sin cargo base), batch endpoint bajo demanda, Key Vault, IaC; eventual Container Registry. & Aprox. USD 0-5/mes & Recurrente bajo. \\
+Monitoring & Observabilidad (Log Analytics / App Insights) por ingestión más corridas de drift. & Aprox. USD 0-5/mes & Recurrente bajo. \\
+Retraining (negocio) & GPU \texttt{NV36ads\_A10\_v5} (USD 3.20/h); condicionada por drift, no por calendario. & USD 12.80-153.60 por retrain & Variable, evitable. \\
 \bottomrule
 \end{tabularx}
+
+En conjunto, la huella cloud del MVP es del orden de USD 5 a USD 25 al mes --storage, observabilidad y compute bajo demanda, con el \texttt{cpu-cluster} en cero entre corridas--, lo que acumula decenas de dólares a la fecha, no miles. El costo material no vive en la plataforma sino en el retraining GPU del proceso de negocio: ahí es donde el gating por drift convierte un gasto fijo por calendario en uno condicionado por evidencia (ver las tablas A10 y de ahorro).
 
 \section{Riesgos y desafíos}
 
@@ -402,6 +428,8 @@ Ataques/seguridad & Exposición de datos sensibles. & Riesgo de cumplimiento. & 
 Cumplimiento & Poca evidencia histórica o auditoría consultable incompleta. & Difícil auditar decisiones. & Storage versionado, handoff y registros auditables; conectar SQL productivo si negocio lo requiere. \\
 Operación & Promover a producción antes de madurez. & Riesgo técnico y reputacional. & Mantener staging/validation, sin prod, y completar roadmap. \\
 Operación & Reintroducir orquestación fuera del endpoint sin necesidad clara. & Doble ownership y mayor complejidad. & Mantener el Azure ML batch endpoint como ruta operacional única. \\
+Modelo (técnico) & Umbrales de drift mal calibrados que generen falsos negativos o falsos positivos. & Conservar un modelo viejo o reentrenar sin necesidad. & Calibrar umbrales con negocio y aplicar un backstop de antigüedad máxima del modelo. \\
+Negocio/valor & Comunicar el ahorro de GPU como el beneficio principal. & Subvaluar la gobernanza del ciclo de vida del modelo. & Posicionar el valor como decisión por evidencia; el ahorro es secundario. \\
 \bottomrule
 \end{longtable}
 
@@ -439,6 +467,21 @@ La solución actual sí es MLOps, pero como foundation/MVP. Todavía faltan capa
   \item Notificación externa o dashboard operativo: usar el payload estable de notificación como contrato de integración.
   \item Hardening enterprise: Private Endpoints, validation estable y eventual prod.
 \end{itemize}
+
+\section{Recomendaciones de implementación}
+
+\begin{tabularx}{\linewidth}{L{0.32\linewidth}L{0.13\linewidth}Y}
+\toprule
+\textbf{Recomendación} & \textbf{Prioridad} & \textbf{Justificación} \\
+\midrule
+Mantener el flujo en \texttt{staging}/\texttt{validation} sin promover a producción todavía. & Alta & El pipeline versionado aún debe estabilizarse y faltan capas de model health y gobierno. \\
+Conservar la política de retraining por evidencia y añadir un backstop de antigüedad máxima del modelo. & Alta & Acota el riesgo de staleness por falsos negativos del monitoreo. \\
+Formalizar con negocio los thresholds de drift (PSI, KS, coverage). & Alta & Convierte los umbrales técnicos en criterios acordados y auditables. \\
+Completar model health: demanda estimada por S-curve vs real y salud de elasticidades. & Media-alta & Hoy el monitoreo es operacional/pre-model; falta la degradación predictiva. \\
+Conectar auditoría SQL productiva solo si aparece un requisito de consulta. & Media & Evita complejidad innecesaria; hoy basta la evidencia versionada en Storage. \\
+Mantener el Azure ML batch endpoint como única ruta de orquestación. & Media & Evita doble ownership con ADF o Functions. \\
+\bottomrule
+\end{tabularx}
 
 \section{Conclusión ejecutiva}
 
