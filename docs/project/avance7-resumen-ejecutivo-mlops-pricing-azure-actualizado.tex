@@ -1,0 +1,436 @@
+\documentclass[11pt,letterpaper]{article}
+
+\usepackage[spanish,es-nodecimaldot]{babel}
+\usepackage[margin=1.8cm]{geometry}
+\usepackage{booktabs}
+\usepackage{tabularx}
+\usepackage{longtable}
+\usepackage[table]{xcolor}
+\usepackage{tikz}
+\usepackage{enumitem}
+\usepackage{hyperref}
+\usepackage{array}
+\usepackage{ragged2e}
+\usepackage{fancyhdr}
+
+\usetikzlibrary{arrows.meta,positioning,shapes.geometric,fit,calc}
+
+\definecolor{azulTec}{HTML}{173B63}
+\definecolor{azulClaro}{HTML}{EAF2F8}
+\definecolor{verdeClaro}{HTML}{E8F5E9}
+\definecolor{ambarClaro}{HTML}{FFF3CD}
+\definecolor{grisClaro}{HTML}{F5F7FA}
+\definecolor{grisTexto}{HTML}{3A3A3A}
+\definecolor{moradoClaro}{HTML}{F1EAF7}
+
+\hypersetup{
+  colorlinks=true,
+  linkcolor=azulTec,
+  urlcolor=azulTec,
+  pdftitle={Avance 7. Resumen ejecutivo actualizado - Plataforma MLOps para Pricing Intelligence en Azure},
+  pdfauthor={Equipo 46}
+}
+
+\pagestyle{fancy}
+\fancyhf{}
+\lhead{\small Avance 7 actualizado - Equipo 46}
+\rhead{\small Plataforma MLOps Pricing Azure}
+\cfoot{\small \thepage}
+\renewcommand{\headrulewidth}{0.4pt}
+
+\makeatletter
+\renewcommand\section{\@startsection{section}{1}{\z@}
+  {-3.5ex \@plus -1ex \@minus -.2ex}
+  {2.3ex \@plus .2ex}
+  {\Large\bfseries\sffamily\color{azulTec}}}
+\renewcommand\subsection{\@startsection{subsection}{2}{\z@}
+  {-3.25ex \@plus -1ex \@minus -.2ex}
+  {1.5ex \@plus .2ex}
+  {\large\bfseries\sffamily\color{azulTec}}}
+\makeatother
+\setlist[itemize]{leftmargin=*,itemsep=0.25em,topsep=0.25em}
+\renewcommand{\arraystretch}{1.25}
+\setlength{\parindent}{0pt}
+\setlength{\parskip}{0.55em}
+
+\newcolumntype{Y}{>{\RaggedRight\arraybackslash}X}
+\newcolumntype{L}[1]{>{\RaggedRight\arraybackslash}p{#1}}
+
+\newcommand{\metricrow}[2]{\textbf{#1} & #2 \\}
+\newcommand{\statusbox}[1]{\colorbox{verdeClaro}{\parbox{\dimexpr\linewidth-2\fboxsep}{#1}}}
+
+\begin{document}
+
+\begin{titlepage}
+  \centering
+  \vspace*{1.2cm}
+  {\Huge\bfseries\sffamily\color{azulTec} Avance 7. Resumen ejecutivo actualizado\par}
+  \vspace{0.35cm}
+  {\LARGE\bfseries Plataforma MLOps para Pricing Intelligence en Azure\par}
+  \vspace{0.35cm}
+  {\large Equipo 46 \textbar{} Resumen para tomadores de decisión \textbar{} Arquitectura vigente\par}
+  \vspace{0.75cm}
+  {\large\bfseries Enfoque actualizado: reentrenar por evidencia, no por calendario\par}
+  \vspace{1cm}
+
+  \begin{tabularx}{0.95\linewidth}{L{0.27\linewidth}Y}
+    \toprule
+    \metricrow{Propósito}{Concentrar las conclusiones esenciales del proyecto, su costo-beneficio, riesgos y recomendación ejecutiva.}
+    \metricrow{Tesis ejecutiva}{El valor principal no es ahorrar GPU; es gobernar el ciclo de vida del modelo HB-SVI con evidencia operacional/pre-model de drift.}
+    \metricrow{Solución vigente}{MVP MLOps en Azure: Azure ML batch endpoint $\rightarrow$ pipeline component/job $\rightarrow$ Storage MLOps $\rightarrow$ handoff y registros auditables.}
+    \metricrow{Resultado clave}{Con seis meses posteriores de datos AUTH, el drift no justificó un reentrenamiento completo del HB-SVI; sí justificó monitoreo operacional, scoring/update y trazabilidad.}
+    \metricrow{Decisión recomendada}{Continuar en staging/validation, estabilizar el batch endpoint y completar model health, auditoría productiva y gobierno antes de producción.}
+    \bottomrule
+  \end{tabularx}
+
+  \vspace{0.85cm}
+  {\Large\bfseries\sffamily\color{azulTec} Decisión ejecutiva recomendada\par}
+  \vspace{0.3cm}
+
+  \begin{tabularx}{0.95\linewidth}{L{0.27\linewidth}Y}
+    \toprule
+    \metricrow{Decisión solicitada}{Aprobar la continuidad del MVP hacia validation, manteniendo la política de retraining basada en evidencia y operando el flujo desde el batch pipeline endpoint administrado en Azure ML.}
+    \metricrow{Criterio de avance}{No promover todavía a producción final. Primero estabilizar el pipeline versionado, formalizar thresholds con negocio y definir reglas de model health, retraining, auditoría productiva y rollback.}
+    \bottomrule
+  \end{tabularx}
+
+  \vfill
+  \statusbox{\textbf{Mensaje central:} el proyecto responde ``¿el modelo ya envejeció lo suficiente como para volver a entrenarlo?''. La respuesta actual es: no todavía; se conserva el modelo y se continúa monitoreando. Esta versión actualiza la arquitectura vigente; el documento histórico queda preservado por separado.}
+\end{titlepage}
+
+\section{Resumen ejecutivo}
+
+El proyecto aborda una necesidad crítica de Pricing Intelligence: pasar de corridas analíticas aisladas a una operación trazable, auditable y repetible. En un entorno B2B donde cambian productos, distribuidores, segmentos, costos, precios y cantidades, no basta con generar una recomendación; también se necesita justificar cuándo mantenerla, cuándo actualizarla y cuándo reentrenar el modelo que alimenta la lógica de pricing.
+
+La solución implementada corresponde a una base MLOps en Azure operada actualmente desde \texttt{pricing-mlops}. El runtime vigente usa un Azure ML batch pipeline endpoint como punto de entrada administrado, un pipeline component versionado como capa de ejecución, Storage MLOps como repositorio de evidencia versionada y registros auditables como contrato de salida. No hay Azure Function intermedia operando el flujo ni Azure SQL audit desplegado como capa productiva.
+
+El enfoque analítico de pricing se basa en un modelo HB-SVI que estima elasticidades. Esas elasticidades alimentan una S-curve de demanda y posteriormente una optimización de revenue/profit para producir recomendaciones de precio. Por tanto, el precio recomendado no sale directamente del modelo, sino de una cadena de decisión: elasticidad $\rightarrow$ demanda estimada $\rightarrow$ optimización $\rightarrow$ reglas y validaciones.
+
+La conclusión ejecutiva más importante es que el principal valor del proyecto no está en reducir el costo directo de GPU por corrida. Si una corrida de entrenamiento dura poco, el ahorro de cómputo puede ser marginal y discutible. El valor real está en establecer una política MLOps para decidir cuándo reentrenar el HB-SVI con base en evidencia. En lugar de reentrenar mensualmente por calendario, el sistema evalúa si los datos recientes presentan cambios suficientes frente al baseline.
+
+Con seis meses posteriores de datos AUTH, el análisis de drift mostró que no existe una señal crítica suficiente para justificar un reentrenamiento completo del HB-SVI. La decisión correcta es conservar el modelo actual, ejecutar scoring/update para nuevos combos cuando aplique, registrar la evidencia y continuar monitoreando. En la arquitectura vigente, esa capacidad vive como monitoreo operacional/pre-model dentro del pipeline de Azure ML; la medición completa de model health HB-SVI/S-curve sigue siendo la siguiente capa de madurez.
+
+\begin{figure}[htbp]
+  \centering
+  \begin{tikzpicture}[
+    node distance=1.05cm and 1.1cm,
+    box/.style={draw=azulTec, rounded corners=3pt, fill=azulClaro, align=center, minimum width=3.1cm, minimum height=1.05cm, font=\small},
+    decision/.style={draw=azulTec, diamond, aspect=2.2, fill=ambarClaro, align=center, inner sep=1.5pt, font=\small},
+    arrow/.style={-{Latex[length=3mm]}, thick, color=azulTec}
+  ]
+    \node[box] (data) {Datos de pricing\\productos, segmentos,\\costos y cantidades};
+    \node[box, right=of data] (elasticity) {HB-SVI\\estima elasticidad};
+    \node[box, right=of elasticity] (demand) {S-curve\\demanda estimada};
+    \node[box, right=of demand] (opt) {Optimización\\revenue/profit};
+    \node[decision, below=of opt] (rules) {Reglas\\y validaciones};
+    \node[box, left=of rules] (rec) {Recomendación\\de precio};
+    \node[box, left=of rec] (monitor) {Drift, cobertura\\y trazabilidad};
+    \draw[arrow] (data) -- (elasticity);
+    \draw[arrow] (elasticity) -- (demand);
+    \draw[arrow] (demand) -- (opt);
+    \draw[arrow] (opt) -- (rules);
+    \draw[arrow] (rules) -- (rec);
+    \draw[arrow] (rec) -- (monitor);
+    \draw[arrow] (monitor.north) |- (elasticity.south);
+  \end{tikzpicture}
+  \caption{Flujo de generación de la recomendación de pricing.}
+\end{figure}
+
+\section{Problema de negocio}
+
+El problema no es solamente calcular precios recomendados; es operar el ciclo de vida de esas recomendaciones y del modelo que las habilita. Sin una plataforma MLOps, las decisiones de retraining tienden a hacerse por rutina, intuición o calendario, lo que puede introducir cambios innecesarios y aumentar la carga de validación.
+
+\begin{itemize}
+  \item Riesgo de reentrenar por calendario sin evidencia de degradación.
+  \item Riesgo de cambiar un modelo estable y generar nuevas versiones innecesarias.
+  \item Dificultad para auditar qué datos, código y configuración generaron una recomendación.
+  \item Dificultad para distinguir entre drift de datos, falta de cobertura, drift de precio y degradación real del componente predictivo.
+  \item Sobrecarga operativa para revisar manualmente outputs y justificar decisiones ante negocio.
+\end{itemize}
+
+\section{Hallazgos principales del análisis exploratorio y de preparación}
+
+\begin{longtable}{L{0.22\linewidth}L{0.38\linewidth}L{0.32\linewidth}}
+\toprule
+\textbf{Avance} & \textbf{Hallazgo} & \textbf{Implicación para la solución} \\
+\midrule
+\endfirsthead
+\toprule
+\textbf{Avance} & \textbf{Hallazgo} & \textbf{Implicación para la solución} \\
+\midrule
+\endhead
+Avance 1 - EDA & Los datos de pricing tienen distribuciones long-tail y nulos estructurales en ciertas variables de costo. & La plataforma debe separar calidad real de comportamiento normal del negocio. \\
+Avance 2 - Feature Engineering & Se consolidó una tabla de features de 8,314 filas con validaciones de consistencia y señales como P20 ajustado, near extreme y rangos P20-P85. & Sirve como base para baseline, monitoreo y contratos de datos. \\
+Avance 3 - Baseline & Se congeló un baseline de 8,314 recomendaciones y 6,982 KPN, con semáforo Green 61.58\%, Yellow 38.42\% y Red 0\%. & El sistema ya tiene referencia contra la cual medir cambios futuros. \\
+Avance 4 - Drift AUTH real & Se compararon seis meses posteriores de historia AUTH contra el baseline; aparecieron 1,754 combos nuevos y señales de coverage/history drift. & Se justifica scoring/update y monitoreo, no reentrenamiento completo por calendario. \\
+Posterior a Avance 6 & Se integró la lógica de drift operacional en el pipeline administrado por Azure ML batch endpoint. & El diseño se convirtió en una capacidad operativa trazable sin Function intermedia y con auditoría pendiente de conexión SQL productiva. \\
+\bottomrule
+\end{longtable}
+
+\section{Modelo y razones del enfoque elegido}
+
+El enfoque elegido no busca que un modelo de caja negra entregue directamente el precio final. Se eligió una cadena explicable y alineada al negocio:
+
+\begin{itemize}
+  \item HB-SVI estima elasticidad por producto/segmento, capturando incertidumbre y heterogeneidad.
+  \item La elasticidad alimenta una S-curve para estimar demanda ante cambios de precio.
+  \item La optimización de revenue/profit genera una recomendación de precio.
+  \item Las reglas de negocio, bandas P20-P85, cobertura y drift controlan si la recomendación sigue siendo válida.
+\end{itemize}
+
+Esto permite que el monitoreo no se limite a ``subió o bajó el precio'', sino que pueda evolucionar hacia preguntas más completas: ¿la elasticidad sigue explicando la demanda?, ¿la S-curve sigue calibrada?, ¿el nuevo mix de productos requiere actualización?, ¿hay suficientes señales para reentrenar? En el estado vigente, esas preguntas completas siguen en roadmap; el pipeline implementado cubre señales operacionales/pre-model.
+
+\subsection*{Modelo final seleccionado y razón de elección}
+
+\begin{tabularx}{\linewidth}{L{0.22\linewidth}L{0.28\linewidth}Y}
+\toprule
+\textbf{Elemento} & \textbf{Decisión} & \textbf{Razón ejecutiva} \\
+\midrule
+Modelo base & HB-SVI para estimar elasticidad & Permite capturar incertidumbre y heterogeneidad entre productos, segmentos y regiones, en lugar de depender de una regla fija. \\
+Capa económica & S-curve de demanda & Convierte elasticidad en una relación interpretable entre precio y cantidad esperada. \\
+Capa de decisión & Optimización de revenue/profit con reglas de negocio & Conecta el modelo con un objetivo económico y con restricciones comerciales como bandas, costos y cobertura. \\
+Capa MLOps & Drift-based retraining operacional/pre-model & El modelo no se reentrena por calendario; se conserva o actualiza con base en evidencia medible, con model health completo como siguiente capa. \\
+\bottomrule
+\end{tabularx}
+
+\section{Solución MLOps propuesta e implementada}
+
+\begin{figure}[htbp]
+  \centering
+  \begin{tikzpicture}[
+    node distance=0.75cm and 0.85cm,
+    box/.style={draw=azulTec, rounded corners=3pt, fill=azulClaro, align=center, minimum width=2.65cm, minimum height=0.95cm, font=\scriptsize},
+    platform/.style={draw=azulTec, rounded corners=3pt, fill=verdeClaro, align=center, minimum width=3.2cm, minimum height=0.95cm, font=\scriptsize},
+    store/.style={draw=azulTec, rounded corners=3pt, fill=ambarClaro, align=center, minimum width=3.15cm, minimum height=0.95cm, font=\scriptsize},
+    audit/.style={draw=azulTec, rounded corners=3pt, fill=moradoClaro, align=center, minimum width=3.1cm, minimum height=0.95cm, font=\scriptsize},
+    arrow/.style={-{Latex[length=2.5mm]}, thick, color=azulTec}
+  ]
+    \node[platform] (platform) {\texttt{pricing-mlops-platform}\\Bicep: RG, Key Vault,\\Log Analytics, Storage, AML,\\identidades y RBAC};
+    \node[box, right=of platform] (repo) {\texttt{pricing-mlops}\\componentes, pipeline,\\endpoint e invocación};
+    \node[box, right=of repo] (endpoint) {Azure ML batch\\pipeline endpoint\\\texttt{pricing-auth-monitoring/blue}};
+    \node[box, below=of endpoint, minimum width=3.35cm] (aml) {Pipeline component\\\texttt{auth\_monitoring}\\\texttt{:0.1.18}};
+    \node[store, left=of aml] (storage) {Storage MLOps\\runs, snapshots,\\drift-logs, reports, artifacts};
+    \node[audit, below=of storage] (audit) {Handoff y registros\\auditables\\SQL productivo pendiente};
+    \node[platform, below=of aml] (driftbox) {Monitoreo operacional/pre-model\\coverage, AUTH history,\\price drift, validity};
+    \node[audit, right=of driftbox] (decision) {Decisión operativa\\scoring/update, watch,\\review o retraining candidate};
+    \draw[arrow] (platform) -- (repo);
+    \draw[arrow] (repo) -- (endpoint);
+    \draw[arrow] (endpoint) -- (aml);
+    \draw[arrow] (aml) -- (storage);
+    \draw[arrow] (aml) -- (driftbox);
+    \draw[arrow] (storage) -- (audit);
+    \draw[arrow] (driftbox) -- (decision);
+  \end{tikzpicture}
+  \caption{Arquitectura ejecutiva vigente de la solución en Azure.}
+\end{figure}
+
+La solución opera como un MLOps foundation. No es aún un ciclo MLOps productivo completo, pero ya contiene los bloques esenciales para ejecutar, monitorear y conservar evidencia:
+
+\begin{itemize}
+  \item \texttt{pricing-mlops-platform} provisiona foundation y workload: resource groups, Key Vault, Log Analytics, Application Insights, Storage funcional, Storage runtime de Azure ML, Azure ML Workspace, Managed Identity para jobs, RBAC y compute \texttt{cpu-cluster}.
+  \item \texttt{pricing-mlops} registra componentes, publica el pipeline component, despliega/invoca el batch endpoint y publica artefactos funcionales en Storage.
+  \item El endpoint vigente es un Azure ML batch pipeline endpoint; no hay Azure Function como runtime operacional intermedio.
+  \item El pipeline vigente es \texttt{pricing\_mlops\_auth\_monitoring\_pipeline:0.1.18}.
+  \item Storage MLOps conserva raw-masked, curated, baseline, runs, snapshots, drift-logs, reports y artifacts.
+  \item La auditoría productiva en Azure SQL no está desplegada; el repo funcional genera registros auditables y contratos de salida antes de conectar una base SQL real.
+  \item GitHub Actions registra componentes y actualiza el batch endpoint, pero no opera un ambiente productivo.
+\end{itemize}
+
+\begin{tabularx}{\linewidth}{L{0.28\linewidth}Y}
+\toprule
+\textbf{Elemento vigente} & \textbf{Estado operativo} \\
+\midrule
+Batch endpoint & \texttt{pricing-auth-monitoring/blue} apunta al pipeline component de AUTH monitoring. \\
+Pipeline versionado & \texttt{pricing\_mlops\_auth\_monitoring\_pipeline:0.1.18}. \\
+Pasos del pipeline & \texttt{validate\_prepare}, \texttt{feature\_engineering}, \texttt{prepare\_current\_auth\_history}, \texttt{build\_monitoring\_inputs}, \texttt{calculate\_recommendation\_validity}, \texttt{calculate\_auth\_history\_drift}, \texttt{calculate\_operational\_decision}, \texttt{simulate\_operational\_handoff}, \texttt{publish\_outputs}, \texttt{notify\_operational\_decision}. \\
+Ambientes & \texttt{staging} y \texttt{validation} habilitan Azure ML; no existe \texttt{prod} en IaC, parámetros ni workflows. \\
+Límites actuales & Sin Private Endpoints, ADF operativo, Azure Functions operativas, SQL audit activo ni endpoints online. \\
+\bottomrule
+\end{tabularx}
+
+\statusbox{\textbf{Estado actualizado:} el drift ya no debe describirse solo como propuesta. Está integrado como monitoreo operacional/pre-model dentro del flujo Azure ML. La siguiente capa será model health del HB-SVI/S-curve y una auditoría productiva si negocio lo requiere.}
+
+\section{Decisión MLOps: reentrenar por evidencia, no por calendario}
+
+Esta es la sección más importante del resumen ejecutivo. El argumento no debe centrarse en que se ahorra GPU, sino en que se evita tomar decisiones de entrenamiento sin evidencia. El ahorro de cómputo queda como beneficio secundario.
+
+\begin{figure}[htbp]
+  \centering
+  \begin{tikzpicture}[
+    node distance=0.85cm and 0.85cm,
+    box/.style={draw=azulTec, rounded corners=3pt, fill=azulClaro, align=center, minimum width=2.8cm, minimum height=0.9cm, font=\small},
+    gate/.style={draw=azulTec, diamond, aspect=2.2, fill=ambarClaro, align=center, inner sep=1.5pt, font=\small},
+    keep/.style={draw=azulTec, rounded corners=3pt, fill=verdeClaro, align=center, minimum width=2.9cm, minimum height=0.9cm, font=\small},
+    arrow/.style={-{Latex[length=2.5mm]}, thick, color=azulTec}
+  ]
+    \node[box] (baseline) {Baseline\\recomendaciones\\y evidencia};
+    \node[box, right=of baseline] (recent) {Datos AUTH\\seis meses\\posteriores};
+    \node[box, right=of recent] (monitor) {Monitoreo\\coverage, history,\\price, validity};
+    \node[gate, below=of monitor] (gate) {¿Evidencia\\suficiente?};
+    \node[keep, left=of gate] (keep) {Conservar modelo\\y monitorear};
+    \node[keep, below=of gate] (score) {Scoring/update\\para nuevos combos};
+    \node[box, right=of gate] (retrain) {Evaluar\\retraining HB-SVI\\y rollback};
+    \draw[arrow] (baseline) -- (recent);
+    \draw[arrow] (recent) -- (monitor);
+    \draw[arrow] (monitor) -- (gate);
+    \draw[arrow] (gate) -- node[above,font=\scriptsize]{No} (keep);
+    \draw[arrow] (gate) -- node[left,font=\scriptsize]{Parcial} (score);
+    \draw[arrow] (gate) -- node[above,font=\scriptsize]{Sí} (retrain);
+  \end{tikzpicture}
+  \caption{Política MLOps de reentrenamiento basada en drift.}
+\end{figure}
+
+\begin{tabularx}{\linewidth}{L{0.23\linewidth}L{0.25\linewidth}L{0.27\linewidth}Y}
+\toprule
+\textbf{Pilar} & \textbf{Qué demuestra} & \textbf{Beneficio} & \textbf{Estado} \\
+\midrule
+Gobernanza del modelo & Hay criterios para decidir cuándo entrenar. & Evita decisiones por calendario o intuición. & Implementado a nivel de drift operacional/pre-model. \\
+Estabilidad del modelo & Seis meses posteriores no detonaron señal suficiente para retraining completo. & Se mantiene un modelo estable. & Evidencia disponible en Avance 4. \\
+Reducción de retraining innecesario & El reentrenamiento se reserva para casos con señales acumuladas. & Menor carga de validación y menor riesgo de cambio innecesario. & Propuesto/operable. \\
+Trazabilidad & Cada decisión queda registrada con métricas, logs, snapshots y contratos auditables. & Mejor auditoría y explicación ante negocio. & Implementado en Storage; SQL productivo pendiente. \\
+Escalabilidad MLOps & El monitoreo corre antes del retraining desde un batch endpoint administrado. & Permite automatizar gating de modelos. & Base implementada; madurez futura. \\
+\bottomrule
+\end{tabularx}
+
+\section{Resultados de drift y lectura ejecutiva}
+
+\begin{tabularx}{\linewidth}{L{0.22\linewidth}L{0.24\linewidth}L{0.27\linewidth}Y}
+\toprule
+\textbf{Señal} & \textbf{Resultado observado} & \textbf{Lectura ejecutiva} & \textbf{Decisión} \\
+\midrule
+Cobertura & 1,754 combos nuevos; 17.42\%. & Hay nuevas combinaciones no cubiertas por el baseline. & Scoring/update, no retrain global. \\
+AUTH history drift & Red. & La historia reciente cambió en composición o comportamiento. & Revisar segmentos y monitorear persistencia. \\
+Price drift & Yellow. & Cambio moderado de precios. & No justifica HB-SVI retraining por sí solo. \\
+Recommendation validity & Mayoría Watch; Red y Yellow acotados. & No hay razón para detener todo el flujo. & Priorizar revisión por revenue e impacto. \\
+Impacto revenue & Red 1.16\%; Yellow 7.26\%. & El impacto crítico es acotado. & Revisión focalizada. \\
+Reentrenamiento HB-SVI & No requerido por price drift alone. & El modelo no ha envejecido lo suficiente para retrain completo. & Mantener modelo y seguir monitoreando. \\
+\bottomrule
+\end{tabularx}
+
+La conclusión es madura: el sistema no dice ``nunca reentrenar'', sino ``reentrenar cuando exista evidencia suficiente''. Esto reduce riesgo, no solamente costo.
+
+\section{Análisis costo-beneficio actualizado}
+
+El beneficio principal es control del ciclo de vida del modelo. El ahorro de GPU se mantiene como beneficio secundario porque, si la corrida de entrenamiento es corta, el ahorro directo de cómputo puede ser marginal. El ahorro más sólido proviene de reducir retraining y validaciones innecesarias.
+
+\begin{tabularx}{\linewidth}{L{0.23\linewidth}L{0.32\linewidth}L{0.28\linewidth}L{0.12\linewidth}}
+\toprule
+\textbf{Beneficio} & \textbf{Descripción} & \textbf{Indicador razonable} & \textbf{Prioridad} \\
+\midrule
+Gobernanza de modelo & Decidir retraining con métricas y baseline. & Política drift-based retraining documentada. & Alta \\
+Estabilidad operativa & Evitar cambiar modelos estables sin necesidad. & Con 6 meses posteriores no se justificó retrain completo. & Alta \\
+Trazabilidad & Registrar datos, código, outputs y decisión. & run logs, snapshots, drift logs, handoff y registros auditables; SQL productivo pendiente. & Alta \\
+Ahorro operativo & Menos validaciones/retrabajo por entrenamientos innecesarios. & Horas de revisión evitadas por ciclo. & Media-alta \\
+Ahorro de cómputo & Menos uso de GPU cuando no hay señal de retrain. & Beneficio secundario; depende de duración de corrida. & Media \\
+Escalabilidad & El monitoreo puede automatizarse antes del retraining. & Gating previo a entrenamiento. & Alta \\
+\bottomrule
+\end{tabularx}
+
+\subsection*{Nota de interpretación de riesgos}
+
+El drift implementado monitorea cambios operativos en datos, cobertura, precio e historia AUTH. No debe interpretarse como medición completa de degradación predictiva del HB-SVI. La siguiente capa de MLOps debe comparar demanda estimada por la S-curve contra demanda real y evaluar si las elasticidades siguen explicando la historia nueva.
+
+\subsection{Costos por fase CRISP-ML}
+
+\begin{tabularx}{\linewidth}{L{0.24\linewidth}L{0.25\linewidth}L{0.18\linewidth}Y}
+\toprule
+\textbf{Fase} & \textbf{Costo principal} & \textbf{Rango estimado MVP} & \textbf{Justificación} \\
+\midrule
+Business/Data Understanding & Alineación y EDA. & Bajo-medio & Principalmente horas de equipo. \\
+Data Preparation & Masking, features, baseline. & Medio & Trabajo analítico y storage bajo. \\
+Modeling & HB-SVI y lógica de pricing. & Medio-alto & Fase más costosa en tiempo técnico. \\
+Evaluation & Baseline, drift, validaciones. & Medio & Permite gobernar retraining. \\
+Deployment & Azure ML batch endpoint, pipeline component, Storage MLOps e IaC de plataforma. & Medio & Infra administrada/bajo demanda sin Function intermedia. \\
+Monitoring & Drift operacional/pre-model periódico. & Bajo recurrente & Evita retraining fijo y revisión innecesaria. \\
+\bottomrule
+\end{tabularx}
+
+\section{Riesgos y desafíos}
+
+\begin{longtable}{L{0.22\linewidth}L{0.27\linewidth}L{0.25\linewidth}L{0.20\linewidth}}
+\toprule
+\textbf{Categoría} & \textbf{Riesgo} & \textbf{Impacto} & \textbf{Mitigación} \\
+\midrule
+\endfirsthead
+\toprule
+\textbf{Categoría} & \textbf{Riesgo} & \textbf{Impacto} & \textbf{Mitigación} \\
+\midrule
+\endhead
+Datos & Nuevos combos sin baseline. & Menor cobertura de recomendaciones. & Scoring/update y fallback policy. \\
+Datos & Drift de composición mal interpretado. & Reentrenamiento innecesario. & Separar coverage drift, price drift y model health. \\
+Prueba y confianza & No medir aún degradación predictiva completa del HB-SVI. & Decisiones incompletas de retraining. & Agregar demanda estimada vs real y calibración S-curve. \\
+Prueba y confianza & Red entendido como retrain automático. & Costos y riesgo de cambio innecesario. & Revisión negocio/técnica antes de reentrenar. \\
+Ataques/seguridad & Exposición de datos sensibles. & Riesgo de cumplimiento. & raw-unmasked solo en data-lab; RBAC; no account keys. \\
+Cumplimiento & Poca evidencia histórica o auditoría consultable incompleta. & Difícil auditar decisiones. & Storage versionado, handoff y registros auditables; conectar SQL productivo si negocio lo requiere. \\
+Operación & Promover a producción antes de madurez. & Riesgo técnico y reputacional. & Mantener staging/validation, sin prod, y completar roadmap. \\
+Operación & Reintroducir orquestación fuera del endpoint sin necesidad clara. & Doble ownership y mayor complejidad. & Mantener el Azure ML batch endpoint como ruta operacional única. \\
+\bottomrule
+\end{longtable}
+
+\section{Qué falta para MLOps completo}
+
+\begin{figure}[htbp]
+  \centering
+  \begin{tikzpicture}[
+    layer/.style={draw=azulTec, rounded corners=3pt, align=center, minimum width=10.5cm, minimum height=0.75cm, font=\small},
+    arrow/.style={-{Latex[length=2.5mm]}, thick, color=azulTec}
+  ]
+    \node[layer, fill=verdeClaro] (base) {Base actual: MLOps foundation/MVP, batch endpoint, Storage versionado, drift operacional/pre-model y evidencia};
+    \node[layer, fill=azulClaro, above=0.25cm of base] (health) {Model health y elasticity health: demanda estimada vs real, calibración S-curve};
+    \node[layer, fill=azulClaro, above=0.25cm of health] (compare) {Champion/challenger y model registry: versiones, métricas y promoción};
+    \node[layer, fill=azulClaro, above=0.25cm of compare] (governance) {Promotion/rollback y retraining governance: umbrales, aprobación y reversión};
+    \node[layer, fill=ambarClaro, above=0.25cm of governance] (enterprise) {Hardening enterprise: auditoría productiva, Private Endpoints, validation estable y eventual prod};
+    \draw[arrow] (base) -- (health);
+    \draw[arrow] (health) -- (compare);
+    \draw[arrow] (compare) -- (governance);
+    \draw[arrow] (governance) -- (enterprise);
+  \end{tikzpicture}
+  \caption{Madurez MLOps: base actual y capas faltantes.}
+\end{figure}
+
+La solución actual sí es MLOps, pero como foundation/MVP. Todavía faltan capas para un MLOps completo de producción:
+
+\begin{itemize}
+  \item Model health: comparar demanda estimada por S-curve contra demanda real nueva.
+  \item Elasticity health: analizar si las elasticidades HB-SVI siguen explicando el comportamiento reciente.
+  \item Champion/challenger: comparar versiones del modelo y decidir cuál es mejor.
+  \item Model registry: versionar modelos, artefactos, métricas y estado de promoción.
+  \item Promotion/rollback: mover modelos entre ambientes y revertir si una versión falla.
+  \item Retraining governance: definir umbrales y aprobación para recalibrar o reentrenar.
+  \item Auditoría productiva: conectar SQL real para logs, drift y snapshots sólo si aparece un requisito de consulta/auditoría que lo justifique.
+  \item Notificación externa o dashboard operativo: usar el payload estable de notificación como contrato de integración.
+  \item Hardening enterprise: Private Endpoints, validation estable y eventual prod.
+\end{itemize}
+
+\section{Conclusión ejecutiva}
+
+\begin{itemize}
+  \item El proyecto no debe venderse principalmente como ahorro de GPU. Ese beneficio existe, pero es secundario y puede ser debatible si las corridas son cortas.
+  \item El valor principal es la decisión MLOps: reentrenar por evidencia, no por calendario.
+  \item El drift permitió responder si el modelo ya envejeció lo suficiente para volver a entrenarlo. La respuesta actual es: no hay evidencia suficiente para reentrenar el HB-SVI completo; sí hay señales operativas que justifican scoring/update y vigilancia.
+  \item La integración posterior del drift en Azure fortalece la solución porque convierte la propuesta en una capacidad operativa desde un Azure ML batch endpoint.
+  \item La recomendación es continuar en staging/validation, consolidar el monitoreo de drift operacional/pre-model y agregar model health, auditoría productiva y gobierno antes de producción completa.
+\end{itemize}
+
+\statusbox{\textbf{Frase final sugerida:} El principal valor del proyecto no está en reducir el costo directo de GPU por corrida, sino en establecer una política MLOps para decidir cuándo reentrenar el modelo HB-SVI con base en evidencia.}
+
+\section*{Cierre para comité ejecutivo}
+\addcontentsline{toc}{section}{Cierre para comité ejecutivo}
+
+\begin{tabularx}{\linewidth}{L{0.36\linewidth}Y}
+\toprule
+\textbf{Pregunta ejecutiva} & \textbf{Respuesta del proyecto} \\
+\midrule
+¿El modelo debe reentrenarse solo porque pasó el mes? & No. El proyecto propone reentrenar por evidencia de drift y, cuando exista la capa completa, model health; no por calendario. \\
+¿Los seis meses posteriores justifican reentrenamiento completo? & No hay evidencia suficiente para reentrenar el HB-SVI completo solo por drift de precio/modelo. \\
+¿Qué sí se debe hacer? & Ejecutar scoring/update para nuevos combos desde el batch endpoint, monitorear cobertura y revisar señales Yellow/Red con negocio. \\
+¿Qué falta para MLOps completo? & Model health, demanda estimada vs real, champion/challenger, model registry, promoción, rollback, auditoría productiva y gobierno formal de retraining. \\
+\bottomrule
+\end{tabularx}
+
+\section*{Anexo. Frase ejecutiva para presentación}
+\addcontentsline{toc}{section}{Anexo. Frase ejecutiva para presentación}
+
+El proyecto responde una pregunta crítica para Pricing Intelligence: ¿el modelo ya envejeció lo suficiente como para reentrenarlo? Con seis meses de datos posteriores, el monitoreo operacional/pre-model de drift mostró que no existe señal suficiente para un reentrenamiento completo del HB-SVI. Por ello, la decisión correcta es conservar el modelo, ejecutar scoring/update para nuevas combinaciones desde el batch endpoint y continuar monitoreando. Esto convierte el retraining en una decisión gobernada por evidencia y no por calendario.
+
+\end{document}
