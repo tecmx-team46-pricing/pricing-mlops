@@ -9,6 +9,14 @@ La presentacion esta pensada para una audiencia ejecutiva/academica. La narrativ
 1. Trabajo analitico derivado de notebooks.
 2. Operacion MLOps en Azure ML.
 
+## Como Editar El Deck
+
+El deck real esta en `presentations/slidev/presentacion-proyecto-equipo-46.md`.
+
+Cada slide se edita desde frontmatter declarativo: `layout`, `title`, `projectName`, `media` y `content`. La estructura visual vive en layouts/componentes locales de Slidev, por lo que el Markdown no debe usar HTML embebido para maquetar.
+
+Para cambiar contenido, edita los textos, bullets, metricas o listas dentro de `media` y `content`. Para cambiar distribucion visual, edita los layouts/componentes y estilos de `presentations/slidev`.
+
 ## Slide 1 - Portada
 
 Presenta el proyecto, el equipo, la organizacion, asesor, patrocinador y fecha.
