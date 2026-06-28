@@ -18,6 +18,7 @@ const mediaKindClass = {
   'status-band': 'tec-status-band',
   'alert-strip': 'tec-alert-strip',
   'repo-split': 'tec-repo-split',
+  'cicd-flow': 'tec-cicd-flow',
   'pipeline-flow': 'tec-pipeline-flow',
   roadmap: 'tec-roadmap',
 }
@@ -84,6 +85,16 @@ function alertClass(item) {
     <template v-else-if="media.kind === 'flow'">
       <template v-for="(item, index) in mediaItems" :key="itemKey(item, index)">
         <span>{{ itemLabel(item) }}</span>
+        <i v-if="index < mediaItems.length - 1" />
+      </template>
+    </template>
+
+    <template v-else-if="media.kind === 'cicd-flow'">
+      <template v-for="(item, index) in mediaItems" :key="itemKey(item, index)">
+        <div>
+          <strong>{{ itemValue(item) }}</strong>
+          <span>{{ itemLabel(item) }}</span>
+        </div>
         <i v-if="index < mediaItems.length - 1" />
       </template>
     </template>

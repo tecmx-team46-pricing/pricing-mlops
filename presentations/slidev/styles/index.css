@@ -445,7 +445,8 @@
 }
 
 .tec-evidence-flow,
-.tec-ops-flow {
+.tec-ops-flow,
+.tec-cicd-flow {
   display: grid;
   grid-template-columns: 1fr 34px 1fr 34px 1fr;
   align-items: center;
@@ -455,6 +456,12 @@
 
 .tec-ops-flow {
   grid-template-columns: 1fr 28px 1fr 28px 1fr 28px 1fr;
+}
+
+.tec-cicd-flow {
+  grid-template-columns: 1fr 20px 1fr 20px 1fr 20px 1fr 20px 1fr;
+  gap: 7px;
+  padding: 12px 14px;
 }
 
 .tec-evidence-flow span,
@@ -474,15 +481,42 @@
   text-align: center;
 }
 
+.tec-cicd-flow div {
+  display: grid;
+  min-height: 58px;
+  align-content: center;
+  gap: 4px;
+  padding: 0 9px;
+  border: 1px solid #d9e1ed;
+  border-radius: 8px;
+  background: var(--tec-white);
+  text-align: center;
+}
+
+.tec-cicd-flow strong {
+  color: var(--tec-blue-text);
+  font-size: 14px;
+  font-weight: 700;
+  line-height: 1;
+}
+
+.tec-cicd-flow span {
+  color: #4b5566;
+  font-size: 10.5px;
+  line-height: 1.05;
+}
+
 .tec-evidence-flow i,
-.tec-ops-flow i {
+.tec-ops-flow i,
+.tec-cicd-flow i {
   position: relative;
   height: 1px;
   background: #9da9bb;
 }
 
 .tec-evidence-flow i::after,
-.tec-ops-flow i::after {
+.tec-ops-flow i::after,
+.tec-cicd-flow i::after {
   position: absolute;
   top: -4px;
   right: -1px;

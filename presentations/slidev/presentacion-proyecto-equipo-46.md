@@ -197,24 +197,33 @@ title: Arquitectura vigente
 projectName: Pricing MLOps AUTH Monitoring
 ariaLabel: Arquitectura vigente
 media:
-  kind: repo-split
-  ariaLabel: Separación de repositorios
+  kind: cicd-flow
+  ariaLabel: CI/CD y registro de componentes Azure ML
   items:
-    - value: pricing-mlops-platform
-      label: "IaC/base Azure: Storage, AML Workspace, Key Vault, App Insights, identidad, RBAC y cpu-cluster."
-    - value: pricing-mlops
-      label: "Operación ML: componentes, pipeline, endpoint, smoke test y publicación de artefactos."
+    - value: GitHub
+      label: main / PR
+    - value: Actions
+      label: CI/CD OIDC
+    - value: Azure ML
+      label: workspace
+    - value: Registro
+      label: componentes
+    - value: Endpoint
+      label: batch blue
 content:
   kind: two-column
   columns:
-    - title: Runtime vigente
+    - title: Repositorios y responsabilidad
       bullets:
-        - Azure ML batch endpoint como entrada administrada.
-        - Pipeline component/job como capa de ejecución.
-        - Storage MLOps particionado por environment, trigger, owner, fecha y run_id.
-    - title: Límite explícito
+        - "`pricing-mlops-platform` mantiene la base Azure: Storage, AML Workspace, Key Vault, App Insights, identidad, RBAC y cluster."
+        - "`pricing-mlops` mantiene la operación ML: componentes, pipeline, endpoint, smoke test y publicación de artefactos."
+        - GitHub Actions autentica con OIDC/RBAC y ejecuta el flujo de build/validación.
+    - title: Registro Azure ML
       variant: muted
-      text: Staging y validation están habilitados. No hay prod, Private Endpoints, ADF, Functions operativas, SQL audit activo ni endpoint online.
+      bullets:
+        - Componentes versionados se registran en Azure ML para ejecución reproducible.
+        - El pipeline usa esas versiones para publicar el batch endpoint `pricing-auth-monitoring/blue`.
+        - Los outputs quedan trazables en Storage MLOps y logs de ejecución.
 ---
 ---
 layout: tec-content
