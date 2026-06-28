@@ -19,6 +19,7 @@ const mediaKindClass = {
   'alert-strip': 'tec-alert-strip',
   'repo-split': 'tec-repo-split',
   'cicd-flow': 'tec-cicd-flow',
+  'dual-run-flow': 'tec-dual-run-flow',
   'pipeline-flow': 'tec-pipeline-flow',
   roadmap: 'tec-roadmap',
 }
@@ -69,6 +70,10 @@ function alertClass(item) {
     yellow: 'is-yellow',
   }[variant] ?? ''
 }
+
+function laneKey(lane, index) {
+  return `${lane.label}-${index}`
+}
 </script>
 
 <template>
@@ -97,6 +102,25 @@ function alertClass(item) {
         </div>
         <i v-if="index < mediaItems.length - 1" />
       </template>
+    </template>
+
+    <template v-else-if="media.kind === 'dual-run-flow'">
+      <div class="tec-dual-source">
+        <strong>{{ media.source?.value }}</strong>
+        <span>{{ media.source?.label }}</span>
+      </div>
+      <div class="tec-dual-lanes">
+        <div v-for="(lane, laneIndex) in media.lanes" :key="laneKey(lane, laneIndex)" class="tec-dual-lane">
+          <b>{{ lane.label }}</b>
+          <template v-for="(item, index) in lane.items" :key="itemKey(item, index)">
+            <div>
+              <strong>{{ itemValue(item) }}</strong>
+              <span>{{ itemLabel(item) }}</span>
+            </div>
+            <i v-if="index < lane.items.length - 1" />
+          </template>
+        </div>
+      </div>
     </template>
 
     <template v-else-if="media.kind === 'status-band'">

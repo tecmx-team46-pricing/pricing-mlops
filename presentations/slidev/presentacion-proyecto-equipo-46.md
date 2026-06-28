@@ -197,31 +197,40 @@ title: Arquitectura vigente
 projectName: Pricing MLOps AUTH Monitoring
 ariaLabel: Arquitectura vigente
 media:
-  kind: cicd-flow
-  ariaLabel: CI/CD y registro de componentes Azure ML
-  items:
-    - value: GitHub
-      label: main / PR
-    - value: Actions
-      label: CI/CD OIDC
-    - value: Azure ML
-      label: workspace
-    - value: Registro
-      label: componentes
-    - value: Endpoint
-      label: batch blue
+  kind: dual-run-flow
+  ariaLabel: Código reusable ejecutable en notebooks y componentes Azure ML
+  source:
+    value: Código reusable
+    label: src/pricing
+  lanes:
+    - label: Análisis
+      items:
+        - value: Notebook
+          label: exploración
+        - value: Análisis
+          label: bloques código
+        - value: Evidencia
+          label: EDA / drift
+    - label: Operación
+      items:
+        - value: Actions
+          label: OIDC CI/CD
+        - value: Componente AML
+          label: registro
+        - value: Endpoint
+          label: batch blue
 content:
   kind: two-column
   columns:
     - title: Repositorios y responsabilidad
       bullets:
         - "`pricing-mlops-platform` mantiene la base Azure: Storage, AML Workspace, Key Vault, App Insights, identidad, RBAC y cluster."
-        - "`pricing-mlops` mantiene la operación ML: componentes, pipeline, endpoint, smoke test y publicación de artefactos."
-        - GitHub Actions autentica con OIDC/RBAC y ejecuta el flujo de build/validación.
+        - "`pricing-mlops` mantiene lógica reusable en `src/pricing`, consumible desde notebooks y wrappers Azure ML."
+        - GitHub Actions autentica con OIDC/RBAC y registra componentes para ejecución gobernada.
     - title: Registro Azure ML
       variant: muted
       bullets:
-        - Componentes versionados se registran en Azure ML para ejecución reproducible.
+        - Los mismos bloques analíticos se validan en notebook y se empaquetan como componentes versionados.
         - El pipeline usa esas versiones para publicar el batch endpoint `pricing-auth-monitoring/blue`.
         - Los outputs quedan trazables en Storage MLOps y logs de ejecución.
 ---

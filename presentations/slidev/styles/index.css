@@ -446,7 +446,8 @@
 
 .tec-evidence-flow,
 .tec-ops-flow,
-.tec-cicd-flow {
+.tec-cicd-flow,
+.tec-dual-run-flow {
   display: grid;
   grid-template-columns: 1fr 34px 1fr 34px 1fr;
   align-items: center;
@@ -462,6 +463,12 @@
   grid-template-columns: 1fr 20px 1fr 20px 1fr 20px 1fr 20px 1fr;
   gap: 7px;
   padding: 12px 14px;
+}
+
+.tec-dual-run-flow {
+  grid-template-columns: 155px 1fr;
+  gap: 12px;
+  padding: 10px 14px;
 }
 
 .tec-evidence-flow span,
@@ -504,6 +511,92 @@
   color: #4b5566;
   font-size: 10.5px;
   line-height: 1.05;
+}
+
+.tec-dual-source {
+  display: grid;
+  min-height: 70px;
+  align-content: center;
+  gap: 4px;
+  padding: 0 12px;
+  border: 1px solid #c8d584;
+  border-radius: 8px;
+  background: #f5f8e8;
+  text-align: center;
+}
+
+.tec-dual-lanes {
+  display: grid;
+  gap: 6px;
+}
+
+.tec-dual-lane {
+  display: grid;
+  grid-template-columns: 74px 1fr 18px 1fr 18px 1fr;
+  align-items: center;
+  gap: 6px;
+}
+
+.tec-dual-lane b,
+.tec-dual-lane div,
+.tec-dual-source {
+  box-sizing: border-box;
+}
+
+.tec-dual-lane b {
+  display: grid;
+  min-height: 27px;
+  place-items: center;
+  border-radius: 999px;
+  background: #e8edf6;
+  color: var(--tec-blue-text);
+  font-size: 11px;
+  line-height: 1;
+}
+
+.tec-dual-lane div {
+  display: grid;
+  min-height: 27px;
+  align-content: center;
+  gap: 2px;
+  padding: 0 8px;
+  border: 1px solid #d9e1ed;
+  border-radius: 7px;
+  background: var(--tec-white);
+  text-align: center;
+}
+
+.tec-dual-source strong,
+.tec-dual-lane strong {
+  color: var(--tec-blue-text);
+  font-size: 12px;
+  font-weight: 700;
+  line-height: 1;
+}
+
+.tec-dual-source span,
+.tec-dual-lane span {
+  color: #4b5566;
+  font-size: 9.5px;
+  line-height: 1;
+}
+
+.tec-dual-lane i {
+  position: relative;
+  height: 1px;
+  background: #9da9bb;
+}
+
+.tec-dual-lane i::after {
+  position: absolute;
+  top: -4px;
+  right: -1px;
+  width: 0;
+  height: 0;
+  border-top: 4px solid transparent;
+  border-bottom: 4px solid transparent;
+  border-left: 7px solid #9da9bb;
+  content: "";
 }
 
 .tec-evidence-flow i,

@@ -61,12 +61,12 @@ Explica como se pasa de notebooks a operacion: codigo reusable, wrappers Azure M
 
 ## Slide 8 - Arquitectura Vigente
 
-Describe la arquitectura actual separando responsabilidades y mostrando el flujo CI/CD:
+Describe la arquitectura actual separando responsabilidades y mostrando el flujo CI/CD con doble ruta de ejecucion:
 
 - `pricing-mlops-platform`: base Azure e infraestructura.
 - `pricing-mlops`: operacion ML, componentes, pipeline, endpoint y artefactos.
 
-Incluye el diagrama GitHub Actions, autenticacion OIDC/RBAC, registro de componentes en Azure ML y publicacion del batch endpoint.
+Incluye como el codigo reusable se puede correr en notebooks para analisis y como componentes versionados en Azure ML para operacion.
 
 ## Slide 9 - Pipeline AzureML Y Outputs
 
