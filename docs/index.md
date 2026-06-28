@@ -50,3 +50,7 @@ GitHub Pages debe estar configurado en el repo con source `GitHub Actions`. El w
 La plantilla base de la presentacion del proyecto se publica como parte del mismo sitio:
 
 <a class="md-button md-button--primary" href="slides/presentacion-proyecto-equipo-46/">Equipo 46 - Presentacion de Proyecto</a>
+
+La guia general de cada slide queda documentada en:
+
+<a class="md-button" href="project/presentacion-proyecto-equipo-46/">Documentacion de slides</a>

@@ -60,6 +60,8 @@ nav:
       - Assets y versionado: azureml/assets.md
       - Pipeline AUTH monitoring: azureml/pipeline.md
       - GitHub Actions: azureml/github-actions.md
+  - Proyecto:
+      - Presentacion Equipo 46: project/presentacion-proyecto-equipo-46.md
   - Operacion:
       - Runbook: operations/runbook.md
   - Referencia:
