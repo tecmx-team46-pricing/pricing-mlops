@@ -10,6 +10,10 @@ build/
 dist/
 *.egg-info/
 
+# Node / Slidev
+node_modules/
+presentations/slidev/.slidev/
+
 # Local configuration and secrets
 .env
 .env.*

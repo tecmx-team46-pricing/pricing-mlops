@@ -1,0 +1,13 @@
+{
+  "name": "pricing-mlops-presentaciones",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev:presentacion-proyecto": "slidev presentacion-proyecto-equipo-46.md --host 127.0.0.1 --port 3030",
+    "build:presentacion-proyecto": "slidev build presentacion-proyecto-equipo-46.md --base ./ --out ../../site/slides/presentacion-proyecto-equipo-46 --without-notes --router-mode hash"
+  },
+  "devDependencies": {
+    "@slidev/cli": "52.16.0",
+    "@slidev/theme-default": "0.25.0"
+  }
+}

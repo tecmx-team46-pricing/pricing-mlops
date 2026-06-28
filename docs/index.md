@@ -44,3 +44,9 @@ mkdocs build --strict
 ```
 
 GitHub Pages debe estar configurado en el repo con source `GitHub Actions`. El workflow `docs` construye en pull request y despliega en `push` a `main` o `workflow_dispatch`.
+
+## Presentacion Slidev
+
+La plantilla base de la presentacion del proyecto se publica como parte del mismo sitio:
+
+<a class="md-button md-button--primary" href="slides/presentacion-proyecto-equipo-46/">Equipo 46 - Presentacion de Proyecto</a>
