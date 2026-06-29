@@ -4,6 +4,8 @@ Esta pagina documenta el rol general de cada slide del deck Slidev publicado en:
 
 <a class="md-button md-button--primary" href="../slides/presentacion-proyecto-equipo-46/">Equipo 46 - Presentacion de Proyecto</a>
 
+[Descargar PDF](presentacion-proyecto-equipo-46.pdf){ .md-button }
+
 La presentacion esta pensada para una audiencia ejecutiva/academica. La narrativa se divide en dos bloques:
 
 1. Trabajo analitico derivado de notebooks.
