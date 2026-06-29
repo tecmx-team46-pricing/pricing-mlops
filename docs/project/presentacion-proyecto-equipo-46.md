@@ -91,3 +91,9 @@ Resume los pasos principales: validacion, feature engineering, historia AUTH, mo
 Cierra con la recomendacion ejecutiva.
 
 Propone continuar hacia validation con retraining gobernado por evidencia y lista pendientes antes de produccion: thresholds, model health, registry, rollback, dashboard y auditoria productiva.
+
+## Slide 13 - Azure Machine Learning Studio View
+
+Muestra evidencia visual desde Azure Machine Learning Studio.
+
+Incluye la vista de componentes registrados y la vista de ejecucion del pipeline, para conectar la abstraccion de codigo con assets versionados y ejecuciones observables en Azure ML.

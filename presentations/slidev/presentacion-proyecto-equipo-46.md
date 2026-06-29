@@ -364,3 +364,21 @@ content:
         - Agregar model health HB-SVI/S-curve.
         - Completar registry, champion/challenger, rollback, dashboard y auditoría productiva.
 ---
+---
+layout: tec-content
+title: Azure Machine Learning Studio view
+projectName: Pricing MLOps AUTH Monitoring
+ariaLabel: Azure Machine Learning Studio view
+media:
+  kind: studio-view
+  ariaLabel: Capturas de componentes y pipeline en Azure Machine Learning Studio
+  items:
+    - value: Components
+      label: Componentes reutilizables y pipeline registrados con versiones en Azure ML.
+      image: ./azureml-components-registry.png
+      alt: Vista Components de Azure Machine Learning Studio
+    - value: Pipeline run
+      label: Ejecución completada con steps encadenados por flow token.
+      image: ./azureml-pipeline-run.png
+      alt: Vista de pipeline ejecutado en Azure Machine Learning Studio
+---

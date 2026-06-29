@@ -22,6 +22,7 @@ const mediaKindClass = {
   'dual-run-flow': 'tec-dual-run-flow',
   'notebook-handoff': 'tec-notebook-handoff',
   'code-abstraction': 'tec-code-abstraction',
+  'studio-view': 'tec-studio-view',
   'pipeline-flow': 'tec-pipeline-flow',
   roadmap: 'tec-roadmap',
 }
@@ -54,6 +55,14 @@ function itemVariant(item) {
 
 function itemCode(item) {
   return typeof item === 'object' ? item.code : ''
+}
+
+function itemImage(item) {
+  return typeof item === 'object' ? item.image : ''
+}
+
+function itemAlt(item) {
+  return typeof item === 'object' ? item.alt : ''
 }
 
 function itemKey(item, index) {
@@ -165,6 +174,16 @@ function laneKey(lane, index) {
         :class="statusClass(item)"
       >
         <span>{{ itemLabel(item) }}</span>
+      </div>
+    </template>
+
+    <template v-else-if="media.kind === 'studio-view'">
+      <div v-for="(item, index) in mediaItems" :key="itemKey(item, index)" class="tec-studio-shot">
+        <img :src="itemImage(item)" :alt="itemAlt(item) || itemValue(item)" />
+        <figcaption>
+          <strong>{{ itemValue(item) }}</strong>
+          <span>{{ itemLabel(item) }}</span>
+        </figcaption>
       </div>
     </template>
 
