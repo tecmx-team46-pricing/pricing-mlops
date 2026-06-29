@@ -17,7 +17,7 @@ presenters:
   - Emanuel Flores Martinez
   - Mario Javier Soriano Aguilera
   - David Alberto Serrano Garcia
-advisor: Por confirmar
+advisor: Iván Reyes Amezcua
 sponsor: Mario
 date: Junio 2026
 coverMedia:
