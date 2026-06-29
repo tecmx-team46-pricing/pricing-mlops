@@ -179,60 +179,166 @@ media:
   items:
     - Notebook controlado
     - src/pricing
-    - wrappers Azure ML
+    - registro Azure ML
     - Batch endpoint
 content:
   kind: section-intro
   label: Objetivo de esta mitad
   text: Mostrar cómo la lógica analítica se volvió una ruta operativa versionable, invocable y auditable dentro de Azure ML.
   tags:
+    - Repositorios claros
     - Componentes delgados
-    - Pipeline versionado
+    - Registro ML
     - Storage MLOps
     - OIDC/RBAC
 ---
 ---
 layout: tec-content
-title: Arquitectura vigente
+title: Qué recibimos desde análisis y notebooks
 projectName: Pricing MLOps AUTH Monitoring
-ariaLabel: Arquitectura vigente
+ariaLabel: Insumos de notebooks
 media:
-  kind: dual-run-flow
-  ariaLabel: Código reusable ejecutable en notebooks y componentes Azure ML
-  source:
-    value: Código reusable
-    label: src/pricing
-  lanes:
-    - label: Análisis
-      items:
-        - value: Notebook
-          label: exploración
-        - value: Análisis
-          label: bloques código
-        - value: Evidencia
-          label: EDA / drift
-    - label: Operación
-      items:
-        - value: Actions
-          label: OIDC CI/CD
-        - value: Componente AML
-          label: registro
-        - value: Endpoint
-          label: batch blue
+  kind: notebook-handoff
+  ariaLabel: Handoff desde notebooks
+  items:
+    - value: Notebooks
+      label: EDA, features, baseline y drift AUTH
+    - value: Evidencia
+      label: snapshots, métricas, thresholds y decision logs
+    - value: Candidatos
+      label: bloques analíticos listos para abstraer
 content:
   kind: two-column
   columns:
-    - title: Repositorios y responsabilidad
+    - title: Insumos analíticos
       bullets:
-        - "`pricing-mlops-platform` mantiene la base Azure: Storage, AML Workspace, Key Vault, App Insights, identidad, RBAC y cluster."
-        - "`pricing-mlops` mantiene lógica reusable en `src/pricing`, consumible desde notebooks y wrappers Azure ML."
-        - GitHub Actions autentica con OIDC/RBAC y registra componentes para ejecución gobernada.
-    - title: Registro Azure ML
+        - Los avances en notebooks documentaron long-tail, nulos estructurales, feature table y baseline.
+        - Las reglas de validez y drift AUTH quedaron probadas con historia reciente.
+        - "La decisión operacional ya tenía señales: combos nuevos, drift, readiness y acción recomendada."
+    - title: Qué faltaba operar
+      variant: muted
+      text: El notebook sirve para análisis y explicación; para operación se necesitaba extraer funciones, contratos de entrada/salida, versionado y ejecución sin depender de una sesión manual.
+---
+---
+layout: tec-content
+title: Cómo se desglosó y abstrajo
+projectName: Pricing MLOps AUTH Monitoring
+ariaLabel: Abstracción de código reusable
+media:
+  kind: dual-run-flow
+  ariaLabel: Progreso paralelo de notebook y Azure ML
+  source:
+    value: Código reusable
+    label: src/pricing + src/pricing_mlops
+  lanes:
+    - label: Notebook
+      items:
+        - value: Import
+          label: regla reusable
+        - value: Validación
+          label: análisis local
+        - value: Evidencia
+          label: métricas / drift
+    - label: Operación
+      items:
+        - value: GitHub
+          label: repo + workflow
+        - value: CI/CD
+          label: OIDC + registro
+          variant: gate
+        - value: Azure ML
+          label: workspace
+          variant: azure
+        - value: Componente
+          label: asset versionado
+        - value: Pipeline
+          label: batch endpoint
+content:
+  kind: two-column
+  columns:
+    - title: Ruta notebook
+      bullets:
+        - La lógica sale de celdas inline y queda reusable en `src/pricing`.
+        - El notebook consume la función para análisis y debugging.
+      examples:
+        - label: Import
+          code: from pricing.auth_monitoring.rules.auth_history_drift import calculate_auth_history_drift
+        - label: Llamada
+          code: result = calculate_auth_history_drift(..., run_id=run_id)
+    - title: Ruta operación MLOps
       variant: muted
       bullets:
-        - Los mismos bloques analíticos se validan en notebook y se empaquetan como componentes versionados.
-        - El pipeline usa esas versiones para publicar el batch endpoint `pricing-auth-monitoring/blue`.
-        - Los outputs quedan trazables en Storage MLOps y logs de ejecución.
+        - GitHub Actions autentica con OIDC/RBAC y registra assets.
+        - `src/pricing_mlops` conecta Storage, componente y pipeline.
+      examples:
+        - label: CI/CD
+          code: register_assets.py --config configs/azureml_auth_monitoring.yml
+        - label: Componente
+          code: run_monitoring_step.py --step calculate_auth_history_drift
+        - label: Pipeline
+          code: "component: azureml:pricing_mlops_calculate_auth_history_drift:0.1.3"
+---
+---
+layout: tec-content
+title: Repositorios y responsabilidades
+projectName: Pricing MLOps AUTH Monitoring
+ariaLabel: Repositorios y responsabilidades
+media:
+  kind: repo-split
+  ariaLabel: Separación de repositorios
+  items:
+    - value: pricing-mlops-platform
+      label: Base Azure, AML Workspace, Storage, Key Vault, App Insights, identidad y RBAC.
+    - value: pricing-mlops
+      label: Código ML, componentes Azure ML, pipeline, endpoint, manifest y outputs.
+content:
+  kind: two-column
+  columns:
+    - title: Plataforma Azure
+      bullets:
+        - "`pricing-mlops-platform` mantiene infraestructura y permisos compartidos."
+        - Provisiona Storage, Azure ML Workspace, Key Vault, App Insights, identidades y RBAC.
+        - Entrega la base para operar sin account keys ni connection strings.
+    - title: Operación ML
+      variant: muted
+      bullets:
+        - "`pricing-mlops` mantiene `src/pricing`, `src/pricing_mlops`, componentes, pipeline y endpoint."
+        - Convierte lógica analítica en assets Azure ML registrados y versionados.
+        - Publica evidencia funcional en Storage MLOps para auditoría.
+---
+---
+layout: tec-content
+title: Registro ML y CI/CD
+projectName: Pricing MLOps AUTH Monitoring
+ariaLabel: Registro ML y CI/CD
+media:
+  kind: registration-flow
+  ariaLabel: Registro de componentes Azure ML desde GitHub
+  items:
+    - value: GitHub
+      label: cambio en src o azureml
+    - value: Actions
+      label: OIDC + RBAC
+    - value: register_assets.py
+      label: componentes y pipeline
+    - value: Manifest
+      label: auth-monitoring-0.1.18
+    - value: Endpoint
+      label: pricing-auth-monitoring/blue
+content:
+  kind: two-column
+  columns:
+    - title: Qué se registra
+      bullets:
+        - "Environment: `pricing-mlops-runtime`."
+        - "Componentes `pricing_mlops_*` con versión."
+        - "Pipeline `pricing_mlops_auth_monitoring_pipeline:0.1.18`."
+    - title: Por qué importa
+      variant: muted
+      bullets:
+        - Cada corrida sabe qué versión ejecutó.
+        - El endpoint usa un pipeline publicado, no una sesión local.
+        - El manifest conecta release, componentes y owner repo.
 ---
 ---
 layout: tec-content

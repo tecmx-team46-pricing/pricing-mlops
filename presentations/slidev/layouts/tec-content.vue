@@ -11,11 +11,15 @@ const props = defineProps({
 })
 
 const frontmatter = computed(() => props.frontmatter ?? {})
+const mediaClass = computed(() => {
+  const kind = frontmatter.value.media?.kind
+  return kind ? `has-media-${kind}` : ''
+})
 </script>
 
 <template>
   <div class="slidev-layout default">
-    <div class="tec-content-frame" :aria-label="frontmatter.ariaLabel || frontmatter.title">
+    <div class="tec-content-frame" :class="mediaClass" :aria-label="frontmatter.ariaLabel || frontmatter.title">
       <header class="tec-top-band" aria-label="Franja superior institucional">
         <img src="/tec-slide-top-band.png" alt="" />
         <div class="tec-section-mark">{{ frontmatter.sectionMark || 'MNA' }}</div>

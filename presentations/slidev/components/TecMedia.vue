@@ -20,6 +20,9 @@ const mediaKindClass = {
   'repo-split': 'tec-repo-split',
   'cicd-flow': 'tec-cicd-flow',
   'dual-run-flow': 'tec-dual-run-flow',
+  'notebook-handoff': 'tec-notebook-handoff',
+  'code-abstraction': 'tec-code-abstraction',
+  'registration-flow': 'tec-registration-flow',
   'pipeline-flow': 'tec-pipeline-flow',
   roadmap: 'tec-roadmap',
 }
@@ -50,6 +53,10 @@ function itemVariant(item) {
   return typeof item === 'object' ? item.variant : ''
 }
 
+function itemCode(item) {
+  return typeof item === 'object' ? item.code : ''
+}
+
 function itemKey(item, index) {
   return `${itemValue(item) ?? itemLabel(item)}-${index}`
 }
@@ -68,6 +75,14 @@ function alertClass(item) {
   return {
     red: 'is-red',
     yellow: 'is-yellow',
+  }[variant] ?? ''
+}
+
+function dualNodeClass(item) {
+  const variant = itemVariant(item)
+  return {
+    gate: 'tec-dual-node-gate',
+    azure: 'tec-dual-node-azure',
   }[variant] ?? ''
 }
 
@@ -94,7 +109,7 @@ function laneKey(lane, index) {
       </template>
     </template>
 
-    <template v-else-if="media.kind === 'cicd-flow'">
+    <template v-else-if="media.kind === 'cicd-flow' || media.kind === 'registration-flow'">
       <template v-for="(item, index) in mediaItems" :key="itemKey(item, index)">
         <div>
           <strong>{{ itemValue(item) }}</strong>
@@ -102,6 +117,26 @@ function laneKey(lane, index) {
         </div>
         <i v-if="index < mediaItems.length - 1" />
       </template>
+    </template>
+
+    <template v-else-if="media.kind === 'notebook-handoff'">
+      <template v-for="(item, index) in mediaItems" :key="itemKey(item, index)">
+        <div>
+          <strong>{{ itemValue(item) }}</strong>
+          <span>{{ itemLabel(item) }}</span>
+        </div>
+        <i v-if="index < mediaItems.length - 1" />
+      </template>
+    </template>
+
+    <template v-else-if="media.kind === 'code-abstraction'">
+      <div v-for="(item, index) in mediaItems" :key="itemKey(item, index)" class="tec-code-row">
+        <div>
+          <strong>{{ itemValue(item) }}</strong>
+          <span>{{ itemLabel(item) }}</span>
+        </div>
+        <code>{{ itemCode(item) }}</code>
+      </div>
     </template>
 
     <template v-else-if="media.kind === 'dual-run-flow'">
@@ -113,7 +148,7 @@ function laneKey(lane, index) {
         <div v-for="(lane, laneIndex) in media.lanes" :key="laneKey(lane, laneIndex)" class="tec-dual-lane">
           <b>{{ lane.label }}</b>
           <template v-for="(item, index) in lane.items" :key="itemKey(item, index)">
-            <div>
+            <div :class="dualNodeClass(item)">
               <strong>{{ itemValue(item) }}</strong>
               <span>{{ itemLabel(item) }}</span>
             </div>

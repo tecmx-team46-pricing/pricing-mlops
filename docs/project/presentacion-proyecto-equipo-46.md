@@ -57,24 +57,42 @@ Muestra combos nuevos, drift AUTH, price drift y la decision recomendada: manten
 
 Abre el segundo bloque de la presentacion.
 
-Explica como se pasa de notebooks a operacion: codigo reusable, wrappers Azure ML, componentes y batch endpoint.
+Explica como se pasa de notebooks a operacion: repositorios claros, codigo reusable, registro Azure ML, componentes y batch endpoint.
 
-## Slide 8 - Arquitectura Vigente
+## Slide 8 - Que Recibimos Desde Analisis Y Notebooks
 
-Describe la arquitectura actual separando responsabilidades y mostrando el flujo CI/CD con doble ruta de ejecucion:
+Resume el punto de partida de la segunda parte.
+
+Los notebooks entregan EDA, feature engineering, baseline, drift AUTH, snapshots, metricas y decision logs. La slide explica que esos insumos funcionan para analisis, pero necesitan abstraerse para operar sin depender de una sesion manual.
+
+## Slide 9 - Como Se Desgloso Y Abstrajo
+
+Muestra como la logica estable pasa de celdas inline a modulos reutilizables.
+
+Recupera el visual de doble ruta: notebook para analisis/validacion y Azure ML para operacion registrada. Incluye ejemplos cortos de import en notebook, wrapper de componente y referencia versionada dentro del pipeline.
+
+## Slide 10 - Repositorios Y Responsabilidades
+
+Describe la separacion de responsabilidades entre repositorios:
 
 - `pricing-mlops-platform`: base Azure e infraestructura.
 - `pricing-mlops`: operacion ML, componentes, pipeline, endpoint y artefactos.
 
-Incluye como el codigo reusable se puede correr en notebooks para analisis y como componentes versionados en Azure ML para operacion.
+La idea central es que la plataforma provee recursos y permisos, mientras el repo ML mantiene la logica y los assets operativos.
 
-## Slide 9 - Pipeline AzureML Y Outputs
+## Slide 11 - Registro ML Y CI/CD
+
+Explica el flujo de publicacion operacional:
+
+GitHub, GitHub Actions, autenticacion OIDC/RBAC, registro de assets Azure ML, manifest de release y batch endpoint.
+
+## Slide 12 - Pipeline AzureML Y Outputs
 
 Muestra el flujo operativo del pipeline Azure ML.
 
 Resume los pasos principales: validacion, feature engineering, historia AUTH, monitoreo, drift, decision, handoff, publicacion y notificacion.
 
-## Slide 10 - Decision Ejecutiva Y Roadmap
+## Slide 13 - Decision Ejecutiva Y Roadmap
 
 Cierra con la recomendacion ejecutiva.
 

@@ -95,6 +95,12 @@ function itemKey(item, index) {
             </li>
           </ul>
           <p v-if="column.text"><InlineText :text="column.text" /></p>
+          <div v-if="column.examples?.length" class="tec-mini-code-list">
+            <div v-for="(example, exampleIndex) in column.examples" :key="itemKey(example, exampleIndex)">
+              <span>{{ example.label }}</span>
+              <code>{{ example.code }}</code>
+            </div>
+          </div>
         </template>
       </section>
     </template>
