@@ -339,30 +339,33 @@ content:
 ---
 ---
 layout: tec-content
-title: Decisión ejecutiva y roadmap
+title: Outputs y extensibilidad operacional
 projectName: Pricing MLOps AUTH Monitoring
-ariaLabel: Cierre ejecutivo
+ariaLabel: Outputs y extensibilidad operacional
 media:
   kind: roadmap
-  ariaLabel: Roadmap MLOps
+  ariaLabel: Flujo de decision operacional
   items:
-    - Foundation/MVP
-    - Validation
-    - Model health
-    - Registry
-    - Rollback
-    - Auditoría
+    - Señales
+    - Semáforo
+    - Acción
+    - Payload
+    - Storage
+    - Extensión
 content:
   kind: two-column
   columns:
-    - type: decision
-      label: Decisión solicitada
-      body: Continuar en validation con retraining gobernado por evidencia y sin vender el MVP como producción completa.
-    - title: Antes de producción
+    - title: Output esperado
       bullets:
-        - Formalizar thresholds con negocio.
-        - Agregar model health HB-SVI/S-curve.
-        - Completar registry, champion/challenger, rollback, dashboard y auditoría productiva.
+        - "Se publica en Storage MLOps: `<container>/environment=<env>/compute=azure-ml/.../run_id=<run_id>/`."
+        - "`runs`: `model_run_log.json`, summaries, payload de notificación y handoff simulado."
+        - "`snapshots`, `drift-logs`, `reports` y `artifacts/manifest` quedan versionados como evidencia."
+    - title: Ventaja modular
+      variant: muted
+      bullets:
+        - "El step de decisión concentra semáforo, acción recomendada, owner y rationale."
+        - "Se puede conectar notificación externa o guardar auditoría en DB sin rehacer el pipeline."
+        - "Tres extensiones naturales: dashboard BI, approval gate y observabilidad/SLA con trigger de re-scoring."
 ---
 ---
 layout: tec-content

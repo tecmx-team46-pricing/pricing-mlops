@@ -86,11 +86,13 @@ Muestra el flujo operativo del pipeline Azure ML.
 
 Resume los pasos principales: validacion, feature engineering, historia AUTH, monitoreo, drift, decision, handoff, publicacion y notificacion.
 
-## Slide 12 - Decision Ejecutiva Y Roadmap
+## Slide 12 - Outputs Y Extensibilidad Operacional
 
-Cierra con la recomendacion ejecutiva.
+Explica que se espera como output operacional de cada corrida y donde se guarda por el momento.
 
-Propone continuar hacia validation con retraining gobernado por evidencia y lista pendientes antes de produccion: thresholds, model health, registry, rollback, dashboard y auditoria productiva.
+La evidencia se publica en Storage MLOps bajo un prefijo versionado por ambiente, compute, trigger, owner, fecha y `run_id`. La slide conecta los steps de decision con los artefactos publicados: logs, summaries, payload de notificacion, handoff simulado, snapshots, drift logs, reports y manifest.
+
+Tambien aclara la ventaja modular: se pueden agregar nodos para notificaciones externas, auditoria en DB, dashboards BI, approval gates y observabilidad/SLA con triggers de re-scoring sin rehacer el pipeline completo.
 
 ## Slide 13 - Azure Machine Learning Studio View
 
