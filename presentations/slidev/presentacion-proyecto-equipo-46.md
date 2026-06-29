@@ -18,7 +18,7 @@ presenters:
   - Mario Javier Soriano Aguilera
   - David Alberto Serrano Garcia
 advisor: Iván Reyes Amezcua
-sponsor: Mario
+sponsor: Carlos Vidales (Director de Sales Operations & Analytics)
 date: Junio 2026
 coverMedia:
   kind: cover-cycle
@@ -169,6 +169,84 @@ content:
 ---
 ---
 layout: tec-content
+title: Métricas de drift para decidir
+projectName: Pricing MLOps AUTH Monitoring
+ariaLabel: Métricas de drift usadas para la decisión
+media:
+  kind: metric-strip
+  ariaLabel: Señales de drift usadas para decisión
+  items:
+    - value: Cobertura
+      label: combos nuevos
+    - value: AUTH
+      label: composición operativa
+    - value: Precio
+      label: cambio relativo
+    - value: Vigencia
+      label: semáforo
+    - value: Impacto
+      label: revenue share
+content:
+  kind: signal-table
+  rows:
+    - signal: Cobertura
+      metric: "% combos nuevos vs baseline"
+      use: Detectar recomendaciones faltantes
+    - signal: Historia AUTH
+      metric: Cambio de distribución/composición
+      use: Ver si cambió el mix operativo
+    - signal: Precio
+      metric: Cambio relativo vs baseline
+      use: Identificar drift de precio
+    - signal: Vigencia
+      metric: Green / Yellow / Red / Watch
+      use: Priorizar revisión
+    - signal: Impacto
+      metric: Revenue share Red/Yellow
+      use: Focalizar casos relevantes
+---
+---
+layout: tec-content
+title: Modelo actual y monitoreo
+projectName: Pricing MLOps AUTH Monitoring
+ariaLabel: Modelo actual y monitoreo implementado
+media:
+  kind: cicd-flow
+  ariaLabel: Flujo del modelo actual
+  items:
+    - value: HB-SVI
+      label: demanda
+    - value: Elasticidad
+      label: sensibilidad
+    - value: S-curve
+      label: respuesta
+    - value: Revenue/profit
+      label: optimización
+    - value: Recomendación
+      label: salida
+content:
+  kind: three-column
+  columns:
+    - title: Modelo actual
+      bullets:
+        - HB-SVI estima comportamiento de compra.
+        - Elasticidad alimenta S-curve.
+        - Optimización revenue/profit genera recomendación.
+    - title: Monitoreo implementado
+      variant: muted
+      bullets:
+        - Coverage.
+        - AUTH history drift.
+        - Price drift.
+        - Validity.
+        - Scoring/update.
+    - title: Monitoreo avanzado pendiente
+      bullets:
+        - "Model health S-curve: demanda estimada vs demanda real."
+        - "Elasticity health: si la elasticidad sigue explicando comportamiento nuevo."
+---
+---
+layout: tec-content
 title: "Parte 2: operación MLOps"
 projectName: Pricing MLOps AUTH Monitoring
 ariaLabel: Parte 2
@@ -194,7 +272,7 @@ content:
 ---
 ---
 layout: tec-content
-title: Qué recibimos desde análisis y notebooks
+title: Handoff desde notebooks
 projectName: Pricing MLOps AUTH Monitoring
 ariaLabel: Insumos de notebooks
 media:
@@ -344,28 +422,33 @@ projectName: Pricing MLOps AUTH Monitoring
 ariaLabel: Outputs y extensibilidad operacional
 media:
   kind: roadmap
-  ariaLabel: Flujo de decision operacional
+  ariaLabel: Ejemplo de output operacional
   items:
-    - Señales
-    - Semáforo
-    - Acción
+    - Run
+    - Prefix
+    - Artefactos
+    - Decisión
     - Payload
     - Storage
-    - Extensión
 content:
   kind: two-column
   columns:
-    - title: Output esperado
+    - title: Ejemplo publicado
       bullets:
-        - "Se publica en Storage MLOps: `<container>/environment=<env>/compute=azure-ml/.../run_id=<run_id>/`."
-        - "`runs`: `model_run_log.json`, summaries, payload de notificación y handoff simulado."
-        - "`snapshots`, `drift-logs`, `reports` y `artifacts/manifest` quedan versionados como evidencia."
-    - title: Ventaja modular
+        - "`run_id`: `20260621T025500Z-new-auth-inputs`."
+        - "`runs/summaries/notification_payload.json` y `operational_decision_summary.csv` son el contrato visible."
+      examples:
+        - label: prefix
+          code: "environment=staging/compute=azure-ml/trigger=batch-endpoint/owner=team46/run_date=20260621/run_id=20260621T025500Z-new-auth-inputs/"
+        - label: payload
+          code: '{status:"Red", should_notify:true, owner:"Pricing PM"}'
+    - title: Cómo se lee
       variant: muted
       bullets:
-        - "El step de decisión concentra semáforo, acción recomendada, owner y rationale."
-        - "Se puede conectar notificación externa o guardar auditoría en DB sin rehacer el pipeline."
-        - "Tres extensiones naturales: dashboard BI, approval gate y observabilidad/SLA con trigger de re-scoring."
+        - "`runs`: 8; `snapshots`: 3; `drift-logs`: 3; `reports`: 2; `artifacts`: manifest."
+        - "Baseline 8,314; current AUTH 10,068; combos nuevos 1,754."
+        - "Decisión `Red`: revisar Red/Yellow y refrescar recomendaciones."
+        - "Extiende a notificación, DB audit, dashboard o approval gate."
 ---
 ---
 layout: tec-content

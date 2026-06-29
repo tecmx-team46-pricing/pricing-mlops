@@ -17,7 +17,9 @@ const rootClass = computed(() => {
       'statement-stack': 'tec-two-col',
       'section-intro': 'tec-section-intro',
       'two-column': 'tec-two-col',
+      'three-column': 'tec-three-col',
       'kpi-grid': 'tec-kpi-grid',
+      'signal-table': 'tec-signal-table-wrap',
     }[kind],
   ]
 })
@@ -76,7 +78,26 @@ function itemKey(item, index) {
       </div>
     </template>
 
-    <template v-else-if="content.kind === 'two-column'">
+    <template v-else-if="content.kind === 'signal-table'">
+      <table class="tec-signal-table">
+        <thead>
+          <tr>
+            <th>Señal</th>
+            <th>Métrica</th>
+            <th>Uso ejecutivo</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr v-for="(row, rowIndex) in content.rows" :key="itemKey(row, rowIndex)">
+            <td>{{ row.signal }}</td>
+            <td><InlineText :text="row.metric" /></td>
+            <td><InlineText :text="row.use" /></td>
+          </tr>
+        </tbody>
+      </table>
+    </template>
+
+    <template v-else-if="content.kind === 'two-column' || content.kind === 'three-column'">
       <section
         v-for="(column, index) in content.columns"
         :key="itemKey(column, index)"
