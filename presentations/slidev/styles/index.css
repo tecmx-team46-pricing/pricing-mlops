@@ -249,6 +249,10 @@
   font-weight: 400;
 }
 
+.tec-cover-meta strong {
+  overflow-wrap: anywhere;
+}
+
 .tec-date {
   position: absolute;
   right: 23px;
@@ -452,6 +456,12 @@
   display: grid;
   grid-template-columns: minmax(0, 1.05fr) minmax(0, 0.95fr);
   gap: 18px;
+}
+
+.tec-three-col {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
 }
 
 .tec-statement,
@@ -844,9 +854,13 @@
 }
 
 .tec-timeline,
-.tec-kpi-strip,
 .tec-alert-strip {
   grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+
+.tec-kpi-strip {
+  grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
+  gap: 10px;
 }
 
 .tec-repo-split {
@@ -875,6 +889,10 @@
   font-size: 18px;
   font-weight: 700;
   line-height: 1;
+}
+
+.tec-kpi-strip strong {
+  font-size: 16px;
 }
 
 .tec-timeline span,
@@ -940,6 +958,81 @@
   display: grid;
   align-content: center;
   background: #f7f9fc;
+}
+
+.tec-three-col .tec-bullet-panel {
+  padding: 15px 16px;
+}
+
+.slidev-layout .tec-three-col h2 {
+  font-size: 16px;
+  line-height: 1.05;
+}
+
+.slidev-layout .tec-three-col li {
+  font-size: 13.7px;
+  line-height: 1.18;
+}
+
+.slidev-layout .tec-three-col li + li {
+  margin-top: 6px;
+}
+
+.tec-signal-table-wrap {
+  display: block;
+}
+
+.tec-signal-table {
+  width: 100%;
+  border-collapse: separate;
+  border-spacing: 0;
+  overflow: hidden;
+  border: 1px solid #dfe4ed;
+  border-radius: 8px;
+  background: var(--tec-white);
+  font-family: var(--tec-heading);
+}
+
+.tec-signal-table th,
+.tec-signal-table td {
+  padding: 8px 10px;
+  border-bottom: 1px solid #e6ebf2;
+  border-left: 1px solid #e6ebf2;
+  vertical-align: top;
+  text-align: left;
+}
+
+.tec-signal-table th:first-child,
+.tec-signal-table td:first-child {
+  border-left: 0;
+}
+
+.tec-signal-table tr:last-child td {
+  border-bottom: 0;
+}
+
+.tec-signal-table th {
+  background: #f3f6fa;
+  color: var(--tec-blue-text);
+  font-size: 13px;
+  font-weight: 700;
+  line-height: 1;
+}
+
+.tec-signal-table td {
+  color: #202637;
+  font-size: 12.7px;
+  line-height: 1.16;
+}
+
+.tec-signal-table td:first-child {
+  width: 16%;
+  color: var(--tec-blue-text);
+  font-weight: 700;
+}
+
+.tec-signal-table td:nth-child(2) {
+  width: 35%;
 }
 
 .tec-decision-card {

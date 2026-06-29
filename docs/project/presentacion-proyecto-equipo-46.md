@@ -53,25 +53,37 @@ Explica los resultados del monitoreo con historia AUTH reciente.
 
 Muestra combos nuevos, drift AUTH, price drift y la decision recomendada: mantener modelo, hacer scoring/update y seguir monitoreando.
 
-## Slide 7 - Parte 2: Operacion MLOps
+## Slide 7 - Metricas De Drift Para Decidir
+
+Resume las señales usadas para convertir drift en una decisión ejecutiva.
+
+Incluye cobertura, historia AUTH, precio, vigencia e impacto, con su métrica y uso ejecutivo.
+
+## Slide 8 - Modelo Actual Y Monitoreo
+
+Aclara la diferencia entre el modelo actual, el monitoreo ya implementado y el monitoreo avanzado pendiente.
+
+El modelo actual sigue la ruta HB-SVI, elasticidad, S-curve, revenue/profit optimization y recomendacion. El monitoreo implementado cubre coverage, AUTH history drift, price drift, validity y scoring/update. El monitoreo avanzado pendiente queda como model health S-curve y elasticity health.
+
+## Slide 9 - Parte 2: Operacion MLOps
 
 Abre el segundo bloque de la presentacion.
 
 Explica como se pasa de notebooks a operacion: repositorios claros, codigo reusable, registro Azure ML, componentes y batch endpoint.
 
-## Slide 8 - Que Recibimos Desde Analisis Y Notebooks
+## Slide 10 - Handoff Desde Notebooks
 
 Resume el punto de partida de la segunda parte.
 
 Los notebooks entregan EDA, feature engineering, baseline, drift AUTH, snapshots, metricas y decision logs. La slide explica que esos insumos funcionan para analisis, pero necesitan abstraerse para operar sin depender de una sesion manual.
 
-## Slide 9 - Como Se Desgloso Y Abstrajo
+## Slide 11 - Como Se Desgloso Y Abstrajo
 
 Muestra como la logica estable pasa de celdas inline a modulos reutilizables.
 
 Recupera el visual de doble ruta: notebook para analisis/validacion y Azure ML para operacion registrada. Incluye ejemplos cortos de import en notebook, wrapper de componente y referencia versionada dentro del pipeline.
 
-## Slide 10 - Repositorios Y Responsabilidades
+## Slide 12 - Repositorios Y Responsabilidades
 
 Describe la separacion de responsabilidades entre repositorios:
 
@@ -80,21 +92,21 @@ Describe la separacion de responsabilidades entre repositorios:
 
 La idea central es que la plataforma provee recursos y permisos, mientras el repo ML mantiene la logica y los assets operativos.
 
-## Slide 11 - Pipeline AzureML Y Outputs
+## Slide 13 - Pipeline AzureML Y Outputs
 
 Muestra el flujo operativo del pipeline Azure ML.
 
 Resume los pasos principales: validacion, feature engineering, historia AUTH, monitoreo, drift, decision, handoff, publicacion y notificacion.
 
-## Slide 12 - Outputs Y Extensibilidad Operacional
+## Slide 14 - Outputs Y Extensibilidad Operacional
 
-Explica que se espera como output operacional de cada corrida y donde se guarda por el momento.
+Muestra un ejemplo concreto de output operacional de una corrida Azure ML y donde se guarda por el momento.
 
-La evidencia se publica en Storage MLOps bajo un prefijo versionado por ambiente, compute, trigger, owner, fecha y `run_id`. La slide conecta los steps de decision con los artefactos publicados: logs, summaries, payload de notificacion, handoff simulado, snapshots, drift logs, reports y manifest.
+Usa como referencia el run `20260621T025500Z-new-auth-inputs`, su prefijo publicado en Storage MLOps y una vista compacta del `notification_payload.json`. La slide tambien muestra como leer el output: conteo de blobs por contenedor, filas de baseline/current AUTH, combos nuevos, semaforo y accion recomendada.
 
-Tambien aclara la ventaja modular: se pueden agregar nodos para notificaciones externas, auditoria en DB, dashboards BI, approval gates y observabilidad/SLA con triggers de re-scoring sin rehacer el pipeline completo.
+La ventaja modular queda conectada al ejemplo: el mismo payload puede alimentar notificaciones externas, auditoria en DB, dashboards BI o approval gates sin rehacer el pipeline completo.
 
-## Slide 13 - Azure Machine Learning Studio View
+## Slide 15 - Azure Machine Learning Studio View
 
 Muestra evidencia visual desde Azure Machine Learning Studio.
 
