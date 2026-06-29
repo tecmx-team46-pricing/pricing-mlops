@@ -80,19 +80,13 @@ Describe la separacion de responsabilidades entre repositorios:
 
 La idea central es que la plataforma provee recursos y permisos, mientras el repo ML mantiene la logica y los assets operativos.
 
-## Slide 11 - Registro ML Y CI/CD
-
-Explica el flujo de publicacion operacional:
-
-GitHub, GitHub Actions, autenticacion OIDC/RBAC, registro de assets Azure ML, manifest de release y batch endpoint.
-
-## Slide 12 - Pipeline AzureML Y Outputs
+## Slide 11 - Pipeline AzureML Y Outputs
 
 Muestra el flujo operativo del pipeline Azure ML.
 
 Resume los pasos principales: validacion, feature engineering, historia AUTH, monitoreo, drift, decision, handoff, publicacion y notificacion.
 
-## Slide 13 - Decision Ejecutiva Y Roadmap
+## Slide 12 - Decision Ejecutiva Y Roadmap
 
 Cierra con la recomendacion ejecutiva.
 

@@ -499,7 +499,6 @@
 .tec-evidence-flow,
 .tec-ops-flow,
 .tec-cicd-flow,
-.tec-registration-flow,
 .tec-notebook-handoff,
 .tec-dual-run-flow {
   display: grid;
@@ -517,12 +516,6 @@
   grid-template-columns: 1fr 20px 1fr 20px 1fr 20px 1fr 20px 1fr;
   gap: 7px;
   padding: 12px 14px;
-}
-
-.tec-registration-flow {
-  grid-template-columns: 1fr 18px 1fr 18px 1.1fr 18px 1fr 18px 1.08fr;
-  gap: 6px;
-  padding: 12px 12px;
 }
 
 .tec-notebook-handoff {
@@ -555,7 +548,6 @@
 }
 
 .tec-cicd-flow div,
-.tec-registration-flow div,
 .tec-notebook-handoff div {
   display: grid;
   min-height: 58px;
@@ -568,17 +560,12 @@
   text-align: center;
 }
 
-.tec-registration-flow div {
-  padding: 0 7px;
-}
-
 .tec-notebook-handoff div {
   min-height: 60px;
   padding: 0 13px;
 }
 
 .tec-cicd-flow strong,
-.tec-registration-flow strong,
 .tec-notebook-handoff strong {
   color: var(--tec-blue-text);
   font-size: 14px;
@@ -586,16 +573,11 @@
   line-height: 1;
 }
 
-.tec-registration-flow strong {
-  font-size: 12.5px;
-}
-
 .tec-notebook-handoff strong {
   font-size: 17px;
 }
 
 .tec-cicd-flow span,
-.tec-registration-flow span,
 .tec-notebook-handoff span {
   color: #4b5566;
   font-size: 10.5px;
@@ -771,7 +753,6 @@
 .tec-evidence-flow i,
 .tec-ops-flow i,
 .tec-cicd-flow i,
-.tec-registration-flow i,
 .tec-notebook-handoff i {
   position: relative;
   height: 1px;
@@ -781,7 +762,6 @@
 .tec-evidence-flow i::after,
 .tec-ops-flow i::after,
 .tec-cicd-flow i::after,
-.tec-registration-flow i::after,
 .tec-notebook-handoff i::after {
   position: absolute;
   top: -4px;

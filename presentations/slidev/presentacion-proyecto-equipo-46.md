@@ -179,7 +179,7 @@ media:
   items:
     - Notebook controlado
     - src/pricing
-    - registro Azure ML
+    - componentes Azure ML
     - Batch endpoint
 content:
   kind: section-intro
@@ -188,7 +188,7 @@ content:
   tags:
     - Repositorios claros
     - Componentes delgados
-    - Registro ML
+    - Componentes versionados
     - Storage MLOps
     - OIDC/RBAC
 ---
@@ -305,40 +305,6 @@ content:
         - "`pricing-mlops` mantiene `src/pricing`, `src/pricing_mlops`, componentes, pipeline y endpoint."
         - Convierte lógica analítica en assets Azure ML registrados y versionados.
         - Publica evidencia funcional en Storage MLOps para auditoría.
----
----
-layout: tec-content
-title: Registro ML y CI/CD
-projectName: Pricing MLOps AUTH Monitoring
-ariaLabel: Registro ML y CI/CD
-media:
-  kind: registration-flow
-  ariaLabel: Registro de componentes Azure ML desde GitHub
-  items:
-    - value: GitHub
-      label: cambio en src o azureml
-    - value: Actions
-      label: OIDC + RBAC
-    - value: register_assets.py
-      label: componentes y pipeline
-    - value: Manifest
-      label: auth-monitoring-0.1.18
-    - value: Endpoint
-      label: pricing-auth-monitoring/blue
-content:
-  kind: two-column
-  columns:
-    - title: Qué se registra
-      bullets:
-        - "Environment: `pricing-mlops-runtime`."
-        - "Componentes `pricing_mlops_*` con versión."
-        - "Pipeline `pricing_mlops_auth_monitoring_pipeline:0.1.18`."
-    - title: Por qué importa
-      variant: muted
-      bullets:
-        - Cada corrida sabe qué versión ejecutó.
-        - El endpoint usa un pipeline publicado, no una sesión local.
-        - El manifest conecta release, componentes y owner repo.
 ---
 ---
 layout: tec-content

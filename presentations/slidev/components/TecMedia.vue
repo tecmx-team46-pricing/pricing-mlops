@@ -22,7 +22,6 @@ const mediaKindClass = {
   'dual-run-flow': 'tec-dual-run-flow',
   'notebook-handoff': 'tec-notebook-handoff',
   'code-abstraction': 'tec-code-abstraction',
-  'registration-flow': 'tec-registration-flow',
   'pipeline-flow': 'tec-pipeline-flow',
   roadmap: 'tec-roadmap',
 }
@@ -109,7 +108,7 @@ function laneKey(lane, index) {
       </template>
     </template>
 
-    <template v-else-if="media.kind === 'cicd-flow' || media.kind === 'registration-flow'">
+    <template v-else-if="media.kind === 'cicd-flow'">
       <template v-for="(item, index) in mediaItems" :key="itemKey(item, index)">
         <div>
           <strong>{{ itemValue(item) }}</strong>
